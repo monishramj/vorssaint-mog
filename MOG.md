@@ -13,22 +13,19 @@ A personal fork of [vorssaint/vorssaint-utils](https://github.com/vorssaint/vors
 | Hover | Circle highlight | Rounded-square highlight (Droppy) |
 | Equalizer | Grey | Album-art tint (Droppy waveform) |
 | Nothing playing | Full player with "Nothing playing" + buttons | Just the cover row; cover opens the player |
-| Bluetooth connect | Flat menu-bar strip | Drop-down card: glyph, "Connected" / name, green battery ring (Droppy) |
+| Bluetooth connect | Flat strip, flat SF Symbol | Same flat strip; real system device art at 23 pt that turns while shown (AirPods buds orbit, headphones sway) |
+| Play/pause | Waited for Spotify's round trip | Glyph flips instantly; reverts if the player refuses |
+| "Playback failed" (orange) | Shown on slow player replies | Only on real errors |
+| Song switch | Hard swap | Title blur-swaps; cover blurs in once per song |
+| No-length streams (Spotify DJ) | Empty timeline gap | Timeline row dropped; island fits |
 
 All 6 commits are on `mog`. The `notch` and `notch-music` test suites pass.
 
 ## Plan for next session
 
-0. **Player bugs (user report, 2026-10-20):**
-   - No animation when switching songs; the new track lags behind.
-   - Orange text shows when changing playback. That's likely the `commandFailed` "playback failed" line in `NotchMusicView`, or the source/consent hint; reproduce and find the cause.
-   - Empty-feeling player (user screenshot): Spotify DJ "Up next" has a session but no duration, so the timeline is hidden while its space stays reserved (`musicPlayerHeight(playing:)` only checks that playback exists). Prev/next are missing too, which leaves gaps. Make the height drop the timeline row when `playback.duration <= 0`, using the same rule as the view, and check that the sparse row still looks balanced.
-   - Play/pause reacts far too slowly. Check `requestedPlaying` in `NotchMusicTransport`; it only updates optimistically for "direct" players, so Spotify waits for the round trip.
-1. **Connect notice: revert to Vorssaint's flat strip, then add 3D icons (user decision, 2026-10-20).** Revert the drop-down card from commit "notch: Droppy-style connect card…" (`git revert`) so the notice sits level in the menu bar as stock does. The only change to keep is a 3D device icon (AirPods etc.) in place of the flat SF Symbol. The battery ring and the drop-down go.
-   - Superseded plan, kept for reference: **3D AirPods in the connect card.** Droppy and Alcove show a turning 3D render, while ours is the flat SF Symbol. Look for system 3D or device art first, such as Find My / CoreTypes device models or the `connectivityModel` approach. Then the card's glyph animates the way Droppy's does.
-2. ~~**Connect card, settle phase.**~~ Dropped (the card is being reverted). After about 2 s, Droppy collapses the card into compact wings (icon on the left, small ring on the right).
-3. **GitHub remote**: done; see the sync workflow in `.github/workflows/upstream-sync.yml`.
-4. Keep polishing pages against Droppy. Empty pages stay at full height (decided).
+1. Decide on removing upstream's ~1 s "between songs" hold so skips feel instant (asked).
+2. Keep polishing pages against Droppy. Empty pages stay at full height (decided).
+3. Keep checking idle cost after each feature. As of 2026-10-20 the fork idles at 0.8% CPU / 28 MB against upstream's 1.4% / 37 MB, both debug builds.
 
 ## Dev loop
 
