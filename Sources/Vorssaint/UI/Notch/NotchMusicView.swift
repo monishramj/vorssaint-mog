@@ -579,11 +579,16 @@ private struct NotchMusicTransport: View {
                 if service.send(.toggle, context: playback.commandContext) { requestedPlaying = !showsPlaying }
             } else { service.requestAutomationAccess() }
         } label: {
-            Image(systemName: showsPlaying ? "pause.fill" : "play.fill")
-                .font(.system(size: compact ? 22 : slot == nil ? 26 : 28, weight: .semibold))
-                .foregroundStyle(.white)
-                .contentTransition(.symbolEffect(.replace))
-                .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: showsPlaying)
+            // mog: Alcove's quick swap: the old glyph shrinks away and the new one pops in, no slow morph.
+            ZStack {
+                Image(systemName: showsPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: compact ? 22 : slot == nil ? 26 : 28, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .id(showsPlaying)
+                    .transition(.asymmetric(insertion: .scale(scale: 0.6).combined(with: .opacity),
+                                            removal: .scale(scale: 0.5).combined(with: .opacity)))
+            }
+                .animation(reduceMotion ? nil : .spring(duration: 0.18, bounce: 0.3), value: showsPlaying)
                 .frame(width: height, height: height)
                 .contentShape(Circle())
         }
