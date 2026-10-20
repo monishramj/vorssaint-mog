@@ -1,4 +1,4 @@
-# mog: every Monday, open (or refresh) a PR that brings vorssaint/vorssaint-utils main into mog.
+# mog: every Monday (14:00 UTC), open or refresh a PR that brings vorssaint/vorssaint-utils main into mog.
 name: Sync upstream
 
 on:
