@@ -53,7 +53,7 @@ struct NotchNotice: Equatable {
         let maximum: CGFloat = event == .accessory && level == nil ? 160 : 240
         func fitted(_ content: CGFloat) -> CGFloat { min(maximum, max(Self.minimumWing, ceil(content) + 16 + cameraGap)) }
         // An empty title leaves the mark alone, without the space after it.
-        let mark = fitted(leading > 0 ? leading + 18 + 8 : 18)
+        let mark = fitted(leading > 0 ? leading + (image == nil ? 18 : 24) + 8 : 18) // mog: device art takes a wider slot
         guard level == nil else { return NotchNoticeWings(leading: mark, trailing: mark) }
         return NotchNoticeWings(leading: mark, trailing: fitted((detail as NSString).size(withAttributes: [.font: font]).width))
     }

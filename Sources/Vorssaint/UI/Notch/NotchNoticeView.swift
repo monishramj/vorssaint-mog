@@ -94,16 +94,16 @@ struct NotchNoticeView: View {
                         NotchAgentMark(provider: agent, size: 13)
                     } else if notice.event == .track {
                         NotchTrackArtwork(size: min(18, geometry.stripHeight - 6))
-                    } else if let image = notice.image { // mog: system device art
-                        Image(nsImage: image).resizable().scaledToFit()
-                            .frame(height: min(18, geometry.stripHeight - 6))
+                    } else if let image = notice.image { // mog: system device art, turning
+                        NotchDeviceSpin(image: image, buds: NotchAccessorySupport.buds(name: notice.detail),
+                                        height: min(23, geometry.stripHeight - 6))
                     } else {
                         Image(systemName: notice.symbol)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(tint)
                     }
                 }
-                .frame(width: 18)
+                .frame(width: notice.image == nil ? 18 : 24) // mog:
                 Text(notice.level == nil ? notice.title : notice.detail)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(textTint)
@@ -139,6 +139,62 @@ struct NotchNoticeView: View {
                 .truncationMode(notice.event == .accessory ? .middle : .tail)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
+    }
+}
+
+/// mog: the connect notice's device turning slowly, as Droppy's does. Earbuds
+/// orbit a vertical axis as a pair; anything else sways ±50° in perspective,
+/// which never turns edge-on the way a full spin of a flat render does. The
+/// timeline exists only while the notice is mounted, and Reduce Motion keeps
+/// the still render.
+private struct NotchDeviceSpin: View {
+    let image: NSImage
+    let buds: [NSImage]
+    let height: CGFloat
+    @State private var start = Date()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// One turn, or one sway there and back.
+    private let period = 1.8
+
+    var body: some View {
+        let dark = NotchAccessorySupport.darkArt.contains(ObjectIdentifier(image))
+        Group {
+            if reduceMotion {
+                still
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let angle = context.date.timeIntervalSince(start) * 2 * .pi / period
+                    if buds.count == 2 {
+                        ZStack {
+                            bud(buds[0], at: angle + .pi)
+                            bud(buds[1], at: angle)
+                        }
+                    } else {
+                        still.rotation3DEffect(.degrees(50 * sin(angle)), axis: (0, 1, 0), perspective: 0.6)
+                    }
+                }
+            }
+        }
+        // A dark render, as black headphones, gets a lift and a soft rim to
+        // stand off the black strip.
+        .brightness(dark ? 0.2 : 0)
+        .shadow(color: dark ? .white.opacity(0.45) : .clear, radius: 0.8)
+    }
+
+    private var still: some View {
+        Image(nsImage: image).resizable().scaledToFit().frame(height: height)
+    }
+
+    /// A bud on a circle about the vertical axis: larger and brighter in
+    /// front, darker behind, a touch narrower at the sides.
+    private func bud(_ art: NSImage, at angle: Double) -> some View {
+        let depth = sin(angle)
+        return Image(nsImage: art).resizable().scaledToFit()
+            .frame(height: height * 0.8)
+            .scaleEffect(x: (1 - 0.15 * abs(cos(angle))) * (1 + 0.1 * depth), y: 1 + 0.1 * depth)
+            .brightness(0.08 * depth)
+            .offset(x: -height * 0.2 * cos(angle))
+            .zIndex(depth)
     }
 }
 
