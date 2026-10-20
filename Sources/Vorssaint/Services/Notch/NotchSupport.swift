@@ -329,7 +329,7 @@ enum NotchLayout {
     /// The song's title and artist, a line each.
     static let musicTitleHeight: CGFloat = 38
     static let musicTimelineHeight: CGFloat = 14
-    static let musicTransportHeight: CGFloat = 44
+    static let musicTransportHeight: CGFloat = 36 // mog: the compact (Droppy-style) transport
     /// From the cover to the timeline, or to the buttons with nothing playing.
     static let musicHeadSpacing: CGFloat = 14
     /// Below a camera the title clears it by this much.
@@ -661,8 +661,10 @@ enum NotchLayout {
     /// The whole player, the same in every preset; with nothing playing it
     /// has no timeline.
     static func musicPlayerHeight(band: CGFloat, playing: Bool = true) -> CGFloat {
-        musicHeadHeight(band: band) + musicHeadSpacing
-            + (playing ? musicTimelineHeight + rowSpacing : 0) + musicTransportHeight + musicBottomRoom
+        // mog: nothing playing keeps only the cover row; the cover opens the player.
+        guard playing else { return musicHeadHeight(band: band) + musicBottomRoom }
+        return musicHeadHeight(band: band) + musicHeadSpacing + musicTimelineHeight + rowSpacing
+            + musicTransportHeight + musicBottomRoom
     }
 
     /// How the music page divides its height between the player and an open

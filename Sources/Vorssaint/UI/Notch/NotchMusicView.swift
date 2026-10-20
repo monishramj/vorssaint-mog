@@ -156,7 +156,7 @@ struct NotchMusicView: View {
         let player = preview ? nil : NotchPreferredPlayer.current()
         let opens = player != nil
         let openTitle = player.map { NotchPreferredPlayer.openTitle(for: $0) } ?? ""
-        return VStack(spacing: NotchLayout.musicHeadSpacing) {
+        return VStack(spacing: 0) {
             head(corner: !band.besideCamera && band.pageSectionsButton) {
                 // With a music app to open, the cover and the buttons below open it.
                 Button { NotchPreferredPlayer.open() } label: {
@@ -173,31 +173,18 @@ struct NotchMusicView: View {
                     } else {
                         Text(text.mediaNothingPlaying).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                     }
-                    // Where the song's artist goes: which app the buttons open.
-                    if opens {
-                        Text(openTitle).font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
-                    }
+                    // Where the song's artist goes: which app the cover opens.
+                    // mog: the hint takes this line now that the island drops the button row.
+                    Text(opens ? openTitle : FeatureStrings.notch(l10n.language).musicHint)
+                        .font(.system(size: 13)).foregroundStyle(.secondary).lineLimit(1)
                 }
             } accessory: {
                 EmptyView()
             } corner: {
                 sectionsButton
             }
-            Group {
-                if opens {
-                    transportRow(leading: { EmptyView() }) { slot in
-                        NotchMusicIdleTransport(openTitle: openTitle, slot: slot)
-                    }
-                } else {
-                    Text(FeatureStrings.notch(l10n.language).musicHint)
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(height: NotchLayout.musicTransportHeight)
-            .padding(.bottom, NotchLayout.musicBottomRoom)
+            // mog: no button row with nothing playing; the island shrinks to the cover row.
+            Color.clear.frame(height: NotchLayout.musicBottomRoom)
         }
         .accessibilityElement(children: .contain)
     }
@@ -295,7 +282,8 @@ struct NotchMusicView: View {
             transportRow {
                 if !preview && shuffle.isOffered { shuffleButton }
             } middle: { slot in
-                NotchMusicTransport(playback: playback, slot: slot)
+                // mog: Droppy-style smaller, evenly spread controls.
+                NotchMusicTransport(playback: playback, compact: true, slot: slot)
             }
             .padding(.top, NotchLayout.rowSpacing)
             Color.clear.frame(height: NotchLayout.musicBottomRoom)
@@ -686,6 +674,7 @@ struct NotchMusicTimeline: View {
                 label: FeatureStrings.notch(l10n.language).playbackPosition,
                 range: 0...playback.duration,
                 tint: tint,
+                trackThickness: 5, // mog: slim Alcove-style bar; full hit area kept
                 valueLabel: timestamp(position),
                 onEditingChanged: { editing in
                     if editing {
@@ -698,7 +687,7 @@ struct NotchMusicTimeline: View {
                 .frame(height: 10)
                 .disabled(service.commandPending)
         } else {
-            NotchMeter(value: position / playback.duration, height: 6, tint: tint)
+            NotchMeter(value: position / playback.duration, height: 5, tint: tint)
         }
     }
 
