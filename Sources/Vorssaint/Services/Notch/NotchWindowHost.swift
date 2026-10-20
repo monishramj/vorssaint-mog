@@ -1442,8 +1442,12 @@ private final class NotchCanvas: NSView {
         contentVisibility.removeAnimation(forKey: "notch.opacity")
         host.layer?.removeAnimation(forKey: kCATransition)
         endArrival()
+        endDeparture() // mog
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        // mog: SwiftUI has not drawn the closed island yet, so the page it
+        // leaves is still the hosting layer's.
+        if kind == .dismiss, !shapeSnaps { beginDeparture(from: currentOpacity) }
         if kind == .replace {
             contentVisibility.opacity = 1
             let transition = CATransition()
@@ -1517,6 +1521,77 @@ private final class NotchCanvas: NSView {
         host.layer?.removeAnimation(forKey: kCATransition)
         CATransaction.commit()
         endArrival()
+        endDeparture() // mog
+    }
+
+    // mog: the closing page stays on screen as a snapshot that blurs, fades
+    // and shrinks toward the top centre while the shape closes, as Alcove's
+    // does, instead of leaving the shrinking island empty.
+    private var departure: CALayer?
+
+    private func beginDeparture(from opacity: Float) {
+        guard opacity > 0, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, let content = host.layer,
+              let visible = visiblePath?.boundingBoxOfPath, !visible.isNull else { return }
+        let rect = visible.integral.intersection(host.frame)
+        let scale = window?.backingScaleFactor ?? 2
+        guard rect.width >= 1, rect.height >= 1,
+              let space = window?.colorSpace?.cgColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: Int(rect.width * scale), height: Int(rect.height * scale),
+                                      bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+        // render(in:) draws the committed layer tree without asking SwiftUI to
+        // update first (cacheDisplay would draw the closed island instead),
+        // only the island's part of the stage, top down.
+        context.scaleBy(x: scale, y: scale)
+        context.translateBy(x: 0, y: rect.height)
+        context.scaleBy(x: 1, y: -1)
+        context.translateBy(x: host.frame.minX - rect.minX, y: host.frame.minY - rect.minY)
+        content.render(in: context)
+        let snapshot = CALayer()
+        snapshot.contents = context.makeImage()
+        snapshot.contentsScale = scale
+        // AppKit re-sorts this layer's sublayers after a subview change below it,
+        // putting its own under the backdrop's black or glass; like the
+        // outline, the snapshot keeps its place by depth (below the outline's 2).
+        snapshot.zPosition = 1
+        snapshot.anchorPoint = CGPoint(x: 0.5, y: 0)
+        snapshot.frame = rect
+        snapshot.opacity = 0
+        snapshot.transform = CATransform3DMakeScale(0.9, 0.9, 1)
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = opacity
+        let shrink = CABasicAnimation(keyPath: "transform")
+        shrink.fromValue = NSValue(caTransform3D: CATransform3DIdentity)
+        var animations = [fade, shrink]
+        if let blur = Self.makeArrivalBlur() {
+            snapshot.filters = [blur]
+            let keyPath = "filters.\(Self.arrivalBlurName).inputRadius"
+            snapshot.setValue(9, forKeyPath: keyPath)
+            let unfocus = CABasicAnimation(keyPath: keyPath)
+            unfocus.fromValue = 0
+            animations.append(unfocus)
+        }
+        let duration: CFTimeInterval = 0.22
+        for animation in animations {
+            animation.duration = duration
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            snapshot.add(animation, forKey: animation.keyPath)
+        }
+        layer?.insertSublayer(snapshot, above: content)
+        departure = snapshot
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self, weak snapshot] in
+            guard let self, let snapshot, self.departure === snapshot else { return }
+            self.endDeparture()
+        }
+    }
+
+    private func endDeparture() {
+        guard let departure else { return }
+        self.departure = nil
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        departure.removeFromSuperlayer()
+        CATransaction.commit()
     }
 
     /// Content arrives out of focus, and an opening page a little small, and
