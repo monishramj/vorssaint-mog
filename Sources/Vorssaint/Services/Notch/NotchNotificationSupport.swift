@@ -40,12 +40,14 @@ struct NotchNotificationInbox {
             return expired
         }
         var arrivals: [NotchSystemNotification] = []
-        for item in live where seen.insert(item.id).inserted {
+        // mog: AX traversal order is not arrival order; use the latest copy of each ID.
+        for item in byID.values.sorted(by: { $0.received < $1.received }) where seen.insert(item.id).inserted {
             guard primed else { continue }
             items.insert(item, at: 0)
             if items.count > NotchNotificationSupport.maximumItems { items.removeLast() }
             arrivals.append(item)
         }
+        items.sort { $0.received > $1.received } // mog: updates cannot leave recent cards below older ones.
         primed = true
         if seen.count > 200 { seen = Set(items.map(\.id) + live.map(\.id)) }
         return arrivals
@@ -212,19 +214,19 @@ enum NotchNotificationPreviewLayout {
     static let iconSize: CGFloat = 26
     static let headerHeight: CGFloat = 28
     static let spacing: CGFloat = 8
-    static let actionHeight: CGFloat = 28
+    // mog: the whole card opens; no separate action row needs measuring.
     static let titleFont = NSFont.systemFont(ofSize: 14, weight: .semibold)
     static let subtitleFont = NSFont.systemFont(ofSize: 13, weight: .medium)
     static let bodyFont = NSFont.systemFont(ofSize: 13)
     static let titleLines = 2
     static let subtitleLines = 1
-    static let bodyLines = 6
+    static let bodyLines = 2 // mog: incoming cards stay brief.
 
     static func contentHeight(for content: NotchNotificationContent, width: CGFloat) -> CGFloat {
         let blocks = [textHeight(content.title, font: titleFont, lines: titleLines, width: width),
                       textHeight(content.subtitle, font: subtitleFont, lines: subtitleLines, width: width),
                       textHeight(content.body, font: bodyFont, lines: bodyLines, width: width)].filter { $0 > 0 }
-        return headerHeight + (blocks + [actionHeight]).reduce(0) { $0 + spacing + $1 }
+        return headerHeight + blocks.reduce(0) { $0 + spacing + $1 } // mog: match the clickable card.
     }
 
     static func textHeight(_ text: String, font: NSFont, lines: Int, width: CGFloat) -> CGFloat {

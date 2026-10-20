@@ -14,6 +14,7 @@ final class NotchNotificationService: ObservableObject {
     @Published private(set) var monitoring = false
     @Published private(set) var openingID: UUID?
     let received = PassthroughSubject<NotchSystemNotification, Never>()
+    let dismissed = PassthroughSubject<UUID, Never>() // mog: page actions also retire the matching banner.
     private let queue = DispatchQueue(label: "com.vorssaint.notch-notifications", qos: .utility)
     private var appIcons: [String: NSImage] = [:]
     private var sourceApplications: [UUID: String] = [:]
@@ -154,16 +155,20 @@ final class NotchNotificationService: ObservableObject {
 
     func dismiss(_ id: UUID) {
         inbox.dismiss(id)
+        if unavailableID == id { unavailableID = nil } // mog: do not retain feedback for a removed card.
         trimIcons()
+        dismissed.send(id) // mog: keep banner and inbox dismissal in sync.
     }
 
     /// Empties the island's inbox only; Notification Center keeps its own.
     /// An opening in flight still needs its message, so it waits for it.
     func clearAll() {
         guard openingID == nil else { return }
+        let ids = items.map(\.id) // mog: clear any of these cards still presented as a banner too.
         inbox.clear()
         unavailableID = nil
         trimIcons()
+        for id in ids { dismissed.send(id) } // mog: preserve the existing inbox-only native policy.
     }
 
     /// The island shows this banner, so its original can leave the screen.
@@ -240,12 +245,14 @@ final class NotchNotificationService: ObservableObject {
                             guard let self, self.generation == requested else { completion(.unavailable); return }
                             self.openingID = nil
                             if app == nil { self.unavailableID = id }
+                            else { self.dismiss(id) } // mog: a successful click consumes the mirrored card.
                             completion(app == nil ? .unavailable : .openedApplication)
                         }
                     }
                 } else {
                     self.openingID = nil
                     if result == .unavailable || result == .uncertain { self.unavailableID = id }
+                    else { self.dismiss(id) } // mog: do not leave an activated notification in the inbox.
                     completion(result)
                 }
                 self.scheduleScan()

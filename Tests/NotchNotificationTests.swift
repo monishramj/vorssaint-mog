@@ -127,6 +127,20 @@ enum NotchNotificationTests {
         inbox = NotchNotificationInbox()
         suite.expect(inbox.items.isEmpty, "locking or disabling discards mirrored messages")
 
+        // mog: newest-first order and latest duplicate content do not depend on AX traversal order.
+        _ = inbox.update([])
+        let older = NotchSystemNotification(id: UUID(), content: content, received: Date(timeIntervalSince1970: 1), canOpen: true)
+        let newer = NotchSystemNotification(id: UUID(), content: content, received: Date(timeIntervalSince1970: 2), canOpen: true)
+        var updated = newer
+        updated.canOpen = false
+        expect(inbox.update([newer, older, updated]) == [older, updated]
+               && inbox.items == [updated, older], "a batch presents its newest card last and lists it first using the latest copy")
+        inbox.dismiss(newer.id)
+        expect(inbox.update([updated, older]).isEmpty && inbox.items == [older],
+               "a consumed card stays dismissed through native layout updates")
+        inbox = NotchNotificationInbox()
+
+
         let kept = item(), onScreen = item(), expired = item()
         _ = inbox.update([])
         _ = inbox.update([kept, onScreen, expired])
@@ -194,7 +208,8 @@ enum NotchNotificationTests {
         let lines = CGFloat(Layout.titleLines + Layout.subtitleLines + Layout.bodyLines)
         let tallestLine = [Layout.titleFont, Layout.subtitleFont, Layout.bodyFont]
             .map { ceil($0.ascender - $0.descender + $0.leading) }.max()!
-        expect(heights[3] <= Layout.headerHeight + Layout.actionHeight + Layout.spacing * 4 + lines * tallestLine + 3,
+        // mog: the whole card opens, leaving only the header and text blocks.
+        expect(Layout.bodyLines == 2 && heights[3] <= Layout.headerHeight + Layout.spacing * 3 + lines * tallestLine + 3,
                "a flood of text stops at the line limits the preview draws with")
         expect(Layout.textHeight("", font: Layout.bodyFont, lines: Layout.bodyLines, width: width) == 0
                && Layout.textHeight("Hi", font: Layout.bodyFont, lines: Layout.bodyLines, width: 0) == 0,
