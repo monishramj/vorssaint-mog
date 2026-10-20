@@ -85,8 +85,46 @@ enum NotchAccessorySupport {
         guard let file = namedArt.first(where: { lowered.contains($0.0) })?.1 ?? classArt[symbol] else { return nil }
         if let cached = artCache[file] { return cached }
         let image = NSImage(contentsOfFile: artFolder + file)
+        if let image, isDark(image) { darkArt.insert(ObjectIdentifier(image)) }
         artCache[file] = image
         return image
+    }
+
+    /// mog: renders dark enough to vanish on the black strip, measured once on load.
+    private(set) static var darkArt: Set<ObjectIdentifier> = []
+
+    /// mog: under 40% mean brightness over its opaque pixels, read at 8×8.
+    private static func isDark(_ image: NSImage) -> Bool {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
+        var pixels = [UInt8](repeating: 0, count: 8 * 8 * 4)
+        pixels.withUnsafeMutableBytes { buffer in
+            CGContext(data: buffer.baseAddress, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
+                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)?
+                .draw(cg, in: CGRect(x: 0, y: 0, width: 8, height: 8))
+        }
+        var light = 0, alpha = 0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            light += Int(pixels[i]) + Int(pixels[i + 1]) + Int(pixels[i + 2])
+            alpha += 3 * Int(pixels[i + 3])
+        }
+        return alpha > 0 && light * 10 < alpha * 4
+    }
+
+    // mog: the left and right bud renders macOS keeps for its fit test, so the
+    // connect notice can turn earbuds as a pair. Empty keeps the single render.
+    private static let budAssets = Bundle(path: "/System/Library/PrivateFrameworks/HeadphoneAssets.framework")
+    private static var budCache: [String: [NSImage]] = [:]
+
+    static func buds(name: String) -> [NSImage] {
+        let lowered = name.lowercased()
+        let earbuds = lowered.contains("airpods") ? !lowered.contains("max")
+            : lowered.contains("beats") && ["buds", "fit pro", "powerbeats"].contains(where: lowered.contains)
+        guard earbuds else { return [] }
+        let prefix = lowered.contains("pro 3") ? "B788_" : ""
+        if let cached = budCache[prefix] { return cached }
+        let pair = ["airpod_left", "airpod_right"].compactMap { budAssets?.image(forResource: prefix + $0) }
+        budCache[prefix] = pair.count == 2 ? pair : []
+        return budCache[prefix] ?? []
     }
 
     static func identity(_ device: PeripheralBatteryDevice) -> String {

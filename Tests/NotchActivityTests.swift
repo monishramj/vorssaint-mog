@@ -949,6 +949,19 @@ enum NotchActivityTests {
         suite.expect(NotchAccessorySupport.symbol(name: "Alex’s Magic Keyboard", majorClass: 0x05, minorClass: 0x25) == "keyboard"
                && NotchAccessorySupport.symbol(name: "AirPods Pro", majorClass: 0x04, minorClass: 0x05) == "airpodspro",
                "a name that says what the accessory is outranks its announced class")
+        // mog: earbuds turn as a pair of buds, anything else keeps one render.
+        if FileManager.default.fileExists(atPath: "/System/Library/PrivateFrameworks/HeadphoneAssets.framework") {
+            suite.expect(NotchAccessorySupport.buds(name: "AirPods Pro").count == 2
+                         && NotchAccessorySupport.buds(name: "AirPods Max").isEmpty
+                         && NotchAccessorySupport.buds(name: "Sony WH-1000XM5").isEmpty,
+                         "earbuds load their left and right renders; headphones do not")
+        }
+        if let dark = NotchAccessorySupport.image(name: "Sony WH-1000XM5", symbol: "headphones"),
+           let light = NotchAccessorySupport.image(name: "AirPods", symbol: "airpods") {
+            suite.expect(NotchAccessorySupport.darkArt.contains(ObjectIdentifier(dark))
+                         && !NotchAccessorySupport.darkArt.contains(ObjectIdentifier(light)),
+                         "only a dark device render gets the light treatment")
+        }
         func device(_ percent: Int, id: String = "HID:1", name: String = "Keyboard") -> PeripheralBatteryDevice {
             PeripheralBatteryDevice(id: id, name: name, percent: percent, kind: .keyboard)
         }
