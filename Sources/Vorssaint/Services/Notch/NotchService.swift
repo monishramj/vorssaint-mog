@@ -22,6 +22,16 @@ struct NotchNotice: Equatable {
     /// A banner that replaces one still on screen keeps at least its wings,
     /// so a burst of messages does not resize the island with each one.
     var minimumWings = NotchNoticeWings.zero
+    /// mog: a connected device's last known charge, for the Droppy-style card's ring.
+    var battery: Int? = nil
+
+    /// mog: a Bluetooth connect notice drops a short card below the camera band.
+    var isConnectionCard: Bool { event == .accessory && level == nil && notification == nil }
+    /// mog: the card's island, the strip plus a 46 pt row and a little wider than the camera.
+    func cardSize(in geometry: NotchGeometry) -> CGSize {
+        CGSize(width: min(geometry.screen.width - 24, max(300, geometry.cameraWidth + 120)),
+               height: geometry.stripHeight + 46)
+    }
 
     /// Each side as wide as what it shows, so neither ends in a band of
     /// empty black: the island reaches further toward its wider side.
@@ -915,6 +925,7 @@ final class NotchService: ObservableObject {
         if expanded { return showingCommandBar ? commandBarSurfaceSize : expandedSize }
         if dragPlaceholder { return CGSize(width: geometry.peek.width, height: geometry.safeContentTop + 66) }
         if let notice {
+            if notice.isConnectionCard, !noticeExpanded { return notice.cardSize(in: geometry) } // mog
             guard noticeExpanded else { return geometry.noticeSize(wings: notice.wings(in: geometry)) }
             return geometry.notificationPreviewSize(
                 contentHeight: notice.previewContentHeight(width: geometry.notificationPreviewContentWidth))
@@ -941,7 +952,7 @@ final class NotchService: ObservableObject {
     /// further toward its wider side. A capsule runs its strips end to end.
     var surfaceShift: CGFloat {
         guard !geometry.floats, !fullscreenCompact, captureControls == nil, !expanded, !dragPlaceholder else { return 0 }
-        if let notice { return noticeExpanded ? 0 : geometry.noticeShift(notice.wings(in: geometry)) }
+        if let notice { return noticeExpanded || notice.isConnectionCard ? 0 : geometry.noticeShift(notice.wings(in: geometry)) } // mog: card is centred
         return namedMusicWings.map { ($0.trailing - $0.leading) / 2 } ?? 0
     }
 

@@ -203,10 +203,10 @@ enum NotchPresentationProbe {
                 displayID: screen.notchDisplayID, frame: screen.frame, visibleTop: screen.visibleFrame.maxY,
                 scale: screen.backingScaleFactor, statusBarThickness: NSStatusBar.system.thickness))
         let notice = NotchNotice(event: .accessory, title: FeatureStrings.notchActivities(L10n.shared.language).connected,
-                                detail: title, symbol: NotchAccessorySupport.symbol(name: title, majorClass: 0x04, minorClass: 0x06))
-        let size = geometry.noticeSize(wings: notice.wings(in: geometry))
-        var shifted = geometry
-        shifted.surfaceShift = geometry.noticeShift(notice.wings(in: geometry))
+                                detail: title, symbol: NotchAccessorySupport.symbol(name: title, majorClass: 0x04, minorClass: 0x06),
+                                battery: 80) // mog: sample charge so the ring shows
+        let size = notice.cardSize(in: geometry) // mog: the connect card, centred
+        let shifted = geometry
         let content = NotchNoticeView(notice: notice, geometry: geometry)
             .frame(width: size.width, height: size.height).background(Color.black.offset(x: shifted.surfaceShift))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

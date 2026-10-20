@@ -404,11 +404,11 @@ enum NotchMusicVisibilityTests {
         suite.expect(service.compactActivity == .downloads, "Nothing for resting music preserves active downloads")
         let notice = NotchNotice(event: .accessory, title: "Wireless Headphones", detail: "Connected", symbol: "headphones")
         service.notice = notice
-        suite.expect(service.surfaceSize == service.geometry.noticeSize(wings: notice.wings(in: service.geometry))
-               && service.surfaceSize.width > service.geometry.notice.width
-               && service.surfaceShift == service.geometry.noticeShift(notice.wings(in: service.geometry))
-               && service.surfaceShift < 0,
-               "a device notice widens the actual presentation toward its longer name")
+        // mog: a connect notice is now a centred Droppy-style card.
+        suite.expect(service.surfaceSize == notice.cardSize(in: service.geometry)
+               && service.surfaceSize.width > service.geometry.cameraWidth
+               && service.surfaceShift == 0,
+               "a device notice drops a centred card")
         service.notice = nil
         suite.expect(service.surfaceShift == 0, "the island returns to the camera's centre once the notice ends")
         suite.expect(service.surfaceSize == service.compactActivityGeometry.compactActivitySize,
@@ -458,7 +458,7 @@ enum NotchMusicVisibilityTests {
                      "its pulse stops at the menus on the named side, the side with the least room")
         naming.namedMusicWings = NotchNoticeWings(leading: musicWing + 120, trailing: musicWing)
         naming.notice = notice
-        suite.expect(naming.surfaceShift == naming.geometry.noticeShift(notice.wings(in: naming.geometry)),
+        suite.expect(naming.surfaceShift == 0, // mog: the connect card stays centred over a named strip
                      "a notice over the strip keeps its own sides")
         naming.notice = nil
         naming.expanded = true

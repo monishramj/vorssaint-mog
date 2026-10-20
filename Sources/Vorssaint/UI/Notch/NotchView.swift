@@ -150,7 +150,7 @@ struct NotchView: View {
                     }
                     // Beside a camera the notice reaches further toward its
                     // wider side, and takes clicks all the way to its end.
-                    .contentShape(Rectangle().offset(x: floats ? 0
+                    .contentShape(Rectangle().offset(x: floats || notice.isConnectionCard ? 0 // mog: card is centred
                         : service.geometry.noticeShift(notice.wings(in: service.geometry))))
                 }
                 // A floating capsule lights up under the pointer. Beside a

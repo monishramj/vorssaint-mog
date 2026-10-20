@@ -96,7 +96,9 @@ final class NotchAccessoryService: NSObject {
             // whole wing to itself before it has to be shortened.
             self.enqueue(NotchNotice(event: .accessory, title: text.connected, detail: name,
                 symbol: NotchAccessorySupport.symbol(name: name, majorClass: UInt32(device.deviceClassMajor),
-                                                     minorClass: UInt32(device.deviceClassMinor))),
+                                                     minorClass: UInt32(device.deviceClassMinor)),
+                // mog: the monitor's last reading for this device, if it has one yet.
+                battery: SystemMonitor.shared.snapshot.peripheralBatterySample.devices.first { $0.name == name }?.percent),
                          device: name)
         }
     }
