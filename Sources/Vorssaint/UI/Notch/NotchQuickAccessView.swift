@@ -99,8 +99,8 @@ struct NotchQuickAccessView: View {
         .accessibilityHidden(!motion.interactive)
     }
 
-    /// mog: a black pill, fading in and dropping from the island
-    /// with the open spring, out as it closes.
+    /// mog: a black pill. It rides the island's own motion (NotchWindowHost's
+    /// `ride`), so here it only fades, without a drop or growth of its own.
     private func pillView(_ pill: CGRect) -> some View {
         let progress = motion.progress
         return HStack(spacing: NotchQuickAccessLayout.pillSpacing) {
@@ -108,9 +108,8 @@ struct NotchQuickAccessView: View {
         }
         .frame(width: pill.width, height: pill.height)
         .background(Color.black, in: Capsule()) // mog: solid black, like the island (user choice)
-        .scaleEffect(0.9 + 0.1 * progress, anchor: .top)
         .opacity(Double(progress))
-        .position(x: pill.midX, y: pill.midY - NotchQuickAccessLayout.pillGap * (1 - progress))
+        .position(x: pill.midX, y: pill.midY)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

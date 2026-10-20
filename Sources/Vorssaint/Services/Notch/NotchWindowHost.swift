@@ -196,7 +196,8 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         quickAccessConfiguration = quickAccessContainer == nil ? nil : quickAccess?.pillRow // mog: one row, the pill below the island
         quickAccessAnimate = canAnimate
         if quickAccessConfiguration != nil { quickAccessNotchSize = size }
-        if withdrawing { quickAccessContainer?.motion.setVisible(false, animated: canAnimate) }
+        // mog: an animated withdrawal rides up with the island instead (see `ride`).
+        if withdrawing && !canAnimate { quickAccessContainer?.motion.setVisible(false, animated: false) }
         let gutter = quickAccessConfiguration == nil ? 0 : NotchQuickAccessLayout.gutter
         let bottom = quickAccessBottomInset(for: size, geometry: geometry)
         let frame = geometry.frame(for: CGSize(width: size.width + gutter * 2, height: size.height + bottom))
@@ -270,6 +271,8 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         var envelope = NotchMotion.envelope(from: start, to: size)
         let reach = zip(motion.sizes, offsets).map { $0.width + 2 * abs($1) }.max() ?? 0
         envelope.width = max(envelope.width, reach.rounded(.up))
+        // mog: room for an open island's soft edge and shadow.
+        if NotchCanvas.casts(start) || NotchCanvas.casts(size) { envelope = NotchCanvas.shadowRoom(envelope) }
         if !revealing {
             envelope = CGSize(width: max(envelope.width, canvas.bounds.width), height: max(envelope.height, canvas.bounds.height))
         }
@@ -303,10 +306,23 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         // Each frame is the island's own silhouette at that size, so its
         // corners and shoulders stay true while the sides swing apart.
         let paths = zip(motion.sizes, offsets).map { canvas.silhouettePath(for: $0, offset: $1) }
-        // The floating controls emerge once the island reaches its size, while it still swings.
-        if quickAccessConfiguration != nil {
-            quickAccessContainer?.motion.setVisible(true, animated: canAnimate,
-                                                    delay: NotchMotion.arrivalTime(from: start, to: size))
+        // mog: the pill is part of the island's motion: it rides the animated
+        // bottom edge on the silhouette's own keyframes, from the first frame,
+        // blurring and fading with it, opening or closing.
+        if let container = quickAccessContainer {
+            // Hidden, or still riding up from a close this open reverses.
+            let appearing = quickAccessConfiguration != nil
+                && (container.motion.progress == 0 || container.quickView.layer?.opacity == 0)
+            if appearing { container.motion.setVisible(true, animated: false) }
+            if appearing || withdrawing {
+                // From where the pill is laid out: below the island it was last configured for.
+                let restOffset = appearing ? 0 : startOffset
+                container.ride(zip(motion.sizes, offsets).map {
+                    CGPoint(x: $1 - restOffset, y: $0.height - quickAccessNotchSize.height)
+                },
+                               keyTimes: motion.keyTimes.map { NSNumber(value: $0) }, duration: motion.duration,
+                               appearing: appearing, arrival: NotchMotion.arrivalTime(from: start, to: size))
+            }
         }
         let animation = CAKeyframeAnimation(keyPath: "path")
         animation.values = paths
@@ -338,9 +354,11 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         let generation = animationGeneration
         let gutter: CGFloat = quickAccessConfiguration == nil ? 0 : NotchQuickAccessLayout.gutter
         let bottom = quickAccessBottomInset(for: targetSize, geometry: currentGeometry)
+        // mog: an open island keeps room for its shadow.
+        let main = NotchCanvas.casts(targetSize) ? NotchCanvas.shadowRoom(targetSize) : targetSize
         // A departing island is ordered out below; its released bounds are never shown.
         let concealed = !hidesWhenSettled
-            && concealForFrameChange(to: reservedFrame(mainSize: targetSize, gutter: gutter, bottom: bottom), generation: generation)
+            && concealForFrameChange(to: reservedFrame(mainSize: main, gutter: gutter, bottom: bottom), generation: generation)
         defer { if concealed { reinstateAfterFrameChange() } }
         guard generation == animationGeneration else { return }
         isAnimating = false
@@ -352,9 +370,11 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         canvas.setContentSize(targetSize)
-        setFrame(mainSize: targetSize, gutter: gutter, bottom: bottom)
+        setFrame(mainSize: main, gutter: gutter, bottom: bottom)
         guard generation == animationGeneration else { CATransaction.commit(); return }
         configureQuickAccess()
+        // mog: in the same commit that hides a withdrawn pill.
+        quickAccessContainer?.endRide()
         canvas.layoutSubtreeIfNeeded()
         guard generation == animationGeneration else { CATransaction.commit(); return }
         CATransaction.commit()
@@ -974,6 +994,45 @@ private final class NotchQuickAccessContainer: NSView {
         else { super.mouseExited(with: event) }
     }
 
+    // mog: the pill rides the island's bottom edge, `lifts` being where the
+    // edge is at each keyframe from where the pill is laid out, and blurs
+    // and fades with it. Nothing stays on its layer once the island lands.
+    private static let rideKeys = ["notch.ride.move", "notch.ride.fade", "notch.ride.blur"]
+
+    func ride(_ lifts: [CGPoint], keyTimes: [NSNumber], duration: CFTimeInterval, appearing: Bool, arrival: CFTimeInterval) {
+        endRide()
+        guard let layer = quickView.layer else { return }
+        // A flipped view's layer lays its sublayers out from the top.
+        let down: CGFloat = layer.superlayer?.isGeometryFlipped == false ? -1 : 1
+        let move = CAKeyframeAnimation(keyPath: "transform")
+        move.values = lifts.map { NSValue(caTransform3D: CATransform3DMakeTranslation($0.x, $0.y * down, 0)) }
+        move.keyTimes = keyTimes
+        move.calculationMode = .linear
+        move.duration = duration
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = appearing ? 0 : layer.presentation()?.opacity ?? 1
+        fade.toValue = appearing ? 1 : 0
+        fade.duration = arrival
+        // Gone with the island, until the settled window hides it.
+        layer.opacity = appearing ? 1 : 0
+        layer.add(move, forKey: Self.rideKeys[0])
+        layer.add(fade, forKey: Self.rideKeys[1])
+        if let filter = NotchCanvas.makeArrivalBlur() {
+            layer.filters = [filter]
+            layer.add(NotchCanvas.morphBlur(opening: appearing, arrival: arrival), forKey: Self.rideKeys[2])
+        }
+    }
+
+    func endRide() {
+        guard let layer = quickView.layer else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        Self.rideKeys.forEach { layer.removeAnimation(forKey: $0) }
+        if layer.filters?.isEmpty == false { layer.filters = nil }
+        layer.opacity = 1
+        CATransaction.commit()
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
         let local = convert(point, from: superview)
         guard canvas.containsVisiblePoint(canvas.convert(local, from: self))
@@ -1051,6 +1110,12 @@ private final class NotchCanvas: NSView {
         layer?.backgroundColor = NSColor.black.cgColor
         layer?.masksToBounds = true
         layer?.mask = silhouette
+        // mog: the mask's shadow lets the canvas's black through around an
+        // open island, a soft halo that never darkens the glass inside it.
+        silhouette.shadowColor = NSColor.black.cgColor
+        silhouette.shadowRadius = 18
+        silhouette.shadowOffset = CGSize(width: 0, height: 4)
+        silhouette.shadowOpacity = 0
         addSubview(backdrop)
         addSubview(host)
         mascotBridge.isHidden = true
@@ -1234,6 +1299,27 @@ private final class NotchCanvas: NSView {
     var contentTopInWindow: CGPoint { host.convert(.zero, to: nil) }
 
     private static let motionKey = "notch.resize"
+    // mog: Alcove's morph. Only an island taller than a strip, as for the
+    // outline, casts a shadow and goes soft as it opens or closes.
+    private static let shadowMotionKey = "notch.resize.shadow"
+    private static let shadowFadeKey = "notch.shadow.fade"
+    private static let silhouetteBlurKey = "notch.silhouette.blur"
+    static let shadowOpacity: Float = 0.35
+    /// Room around the island for the shadow's and the soft edge's spread.
+    static let shadowMargin: CGFloat = 32
+    static func casts(_ size: CGSize) -> Bool { size.height > 64 }
+    static func shadowRoom(_ size: CGSize) -> CGSize {
+        CGSize(width: size.width + shadowMargin * 2, height: size.height + shadowMargin)
+    }
+    /// The whole island's blur: heavy to sharp by the time it arrives, or
+    /// soft at once on the way in until it lands.
+    static func morphBlur(opening: Bool, arrival: CFTimeInterval) -> CAKeyframeAnimation {
+        let blur = CAKeyframeAnimation(keyPath: "filters.\(arrivalBlurName).inputRadius")
+        blur.values = opening ? [8, 0] : [0, 10, 10, 0]
+        blur.keyTimes = opening ? [0, 1] : [0, 0.2, 0.75, 1]
+        blur.duration = arrival
+        return blur
+    }
     private static let departureKey = "notchDeparture"
     var departsContent: Bool {
         contentVisibility.animation(forKey: "notch.opacity")?.value(forKey: Self.departureKey) as? Bool == true
@@ -1340,6 +1426,31 @@ private final class NotchCanvas: NSView {
         silhouetteSize = contentSize
         edge.path = silhouette.path
         silhouette.add(animation, forKey: Self.motionKey)
+        // mog: the shadow follows the silhouette and fades with the open island;
+        // opening or closing, the silhouette itself goes soft, so the black's
+        // edges blur with the content. Gone again when the motion stops.
+        silhouette.shadowPath = silhouette.path
+        silhouette.shadowOpacity = Self.casts(contentSize) ? Self.shadowOpacity : 0
+        if let motion, Self.casts(motion.from) || Self.casts(motion.to),
+           let shadow = animation.copy() as? CAKeyframeAnimation {
+            shadow.keyPath = "shadowPath"
+            shadow.delegate = nil
+            silhouette.add(shadow, forKey: Self.shadowMotionKey)
+            let opening = !Self.casts(motion.from)
+            if opening || !Self.casts(motion.to) {
+                let arrival = NotchMotion.arrivalTime(from: motion.from, to: motion.to)
+                let fade = CABasicAnimation(keyPath: "shadowOpacity")
+                fade.fromValue = silhouette.animation(forKey: Self.shadowFadeKey) == nil
+                    ? (opening ? 0 : Self.shadowOpacity) : silhouette.presentation()?.shadowOpacity ?? 0
+                fade.toValue = silhouette.shadowOpacity
+                fade.duration = opening ? arrival : arrival / 2
+                silhouette.add(fade, forKey: Self.shadowFadeKey)
+                if let filter = Self.makeArrivalBlur() {
+                    silhouette.filters = [filter]
+                    silhouette.add(Self.morphBlur(opening: opening, arrival: arrival), forKey: Self.silhouetteBlurKey)
+                }
+            }
+        }
         if let from { setBackdropContour(inCanvas(from)) }
         // Only the material follows the display link; content layout and the
         // native window remain fixed for the duration of the animation.
@@ -1355,6 +1466,13 @@ private final class NotchCanvas: NSView {
         motionTimeline = nil
         silhouette.removeAnimation(forKey: Self.motionKey)
         edge.removeAnimation(forKey: Self.motionKey)
+        // mog: nothing of the morph stays on the resting island.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        silhouette.removeAnimation(forKey: Self.shadowMotionKey)
+        silhouette.removeAnimation(forKey: Self.silhouetteBlurKey)
+        if silhouette.filters?.isEmpty == false { silhouette.filters = nil }
+        CATransaction.commit()
         backdropDisplayLink?.invalidate()
         backdropDisplayLink = nil
     }
@@ -1467,7 +1585,8 @@ private final class NotchCanvas: NSView {
             // needs its first frames drawn.
             // mog: content blurs in with the growth rather than after it (Alcove-like).
             let keyTimes: [NSNumber] = kind == .dismiss ? [0, 0.4, 1] : shapeSnaps ? [0, 0.25, 1] : [0, 0.1, 1]
-            let duration: CFTimeInterval = kind == .dismiss ? 0.34 : shapeSnaps ? 0.2 : 0.38
+            // mog: sharp as the shape lands, ~0.25 s, with the faster springs.
+            let duration: CFTimeInterval = kind == .dismiss ? 0.26 : shapeSnaps ? 0.2 : 0.25
             animation.values = [start, start, 1]
             animation.keyTimes = keyTimes
             animation.duration = duration
@@ -1571,7 +1690,7 @@ private final class NotchCanvas: NSView {
             unfocus.fromValue = 0
             animations.append(unfocus)
         }
-        let duration: CFTimeInterval = 0.22
+        let duration: CFTimeInterval = 0.16 // mog: gone as the pill is reached, ~0.18 s
         for animation in animations {
             animation.duration = duration
             animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -1604,7 +1723,7 @@ private final class NotchCanvas: NSView {
         var width: CGFloat = 0
     }
 
-    private static let arrivalBlurName = "notchArrival"
+    static let arrivalBlurName = "notchArrival" // mog: shared with the pill
     private static let arrivalBlurKey = "notch.arrival.blur"
     private static let arrivalScaleKey = "notch.arrival.scale"
     private var arrival: Arrival?
@@ -1614,7 +1733,7 @@ private final class NotchCanvas: NSView {
     /// rest of the island; a Core Image filter would need the hosting view's
     /// whole layer tree rendered in this process. Without it, content only
     /// fades and grows in.
-    private static func makeArrivalBlur() -> NSObject? {
+    static func makeArrivalBlur() -> NSObject? { // mog: shared with the pill
         let make = NSSelectorFromString("filterWithType:")
         guard let type = NSClassFromString("CAFilter") as? NSObject.Type, type.responds(to: make),
               let filter = type.perform(make, with: "gaussianBlur")?.takeUnretainedValue() as? NSObject else { return nil }
@@ -1815,6 +1934,8 @@ private final class NotchCanvas: NSView {
         silhouetteSize = motionStart ?? contentSize
         silhouette.path = silhouettePath(for: silhouetteSize, offset: motionStart == nil ? 0 : motionStartOffset)
         edge.path = silhouette.path
+        silhouette.shadowPath = silhouette.path // mog:
+        silhouette.shadowOpacity = Self.casts(silhouetteSize) ? Self.shadowOpacity : 0
         updateContrast()
         // Keep foreground layout fixed inside the reserved reveal area. Only
         // the separate backdrop's contour changes on animation frames.
