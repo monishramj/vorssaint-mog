@@ -241,6 +241,10 @@ struct NotchMusicView: View {
 
     /// mog: Alcove-style song change, run only while it happens; Reduce Motion keeps a plain cross-fade.
     private var songSwap: AnyTransition { reduceMotion ? .opacity : AnyTransition(.blurReplace) }
+    /// mog: the song whose cover last changed, and when its first cover came. A cover for a new song,
+    /// or one landing just after it, blurs in; the same art handed over again later swaps unseen.
+    @State private var coverSong: String?
+    @State private var coverSongAt = Date.distantPast
 
     /// The cover and the song, the timeline across the island, then one row
     /// of buttons, as a phone's island lays out its player.
@@ -254,7 +258,11 @@ struct NotchMusicView: View {
                             .id(service.artwork.map(ObjectIdentifier.init))
                             .transition(songSwap)
                     }
-                    .animation(.smooth(duration: 0.3), value: service.artwork.map(ObjectIdentifier.init))
+                    .animation(playback.track.title != coverSong || Date().timeIntervalSince(coverSongAt) < 0.9
+                               ? .smooth(duration: 0.3) : nil, value: service.artwork.map(ObjectIdentifier.init))
+                    .onChange(of: service.artwork.map(ObjectIdentifier.init)) {
+                        if playback.track.title != coverSong { coverSong = playback.track.title; coverSongAt = Date() }
+                    }
                     .scaleEffect(playback.isPlaying || reduceMotion ? 1 : 0.94)
                     .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: playback.isPlaying)
                 }
