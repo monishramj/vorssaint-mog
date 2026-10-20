@@ -13,17 +13,16 @@ A personal fork of [vorssaint/vorssaint-utils](https://github.com/vorssaint/vors
 | Hover | Circle highlight | Rounded-square highlight (Droppy) |
 | Equalizer | Grey | Album-art tint (Droppy waveform) |
 | Nothing playing | Full player with "Nothing playing" + buttons | Just the cover row; cover opens the player |
-| Bluetooth connect | Flat strip, flat SF Symbol | Same flat strip; real system device art at 23 pt that turns while shown (AirPods buds orbit, headphones sway) |
+| Bluetooth connect | Flat strip, flat SF Symbol | Same flat strip; the device's real 3D model turns in the icon slot (pre-rendered sprite sheets, ~21 MB peak). Run `Tools/fetch-device-models.sh` once; the models stay local. |
 | Play/pause | Waited for Spotify's round trip | Glyph flips instantly; reverts if the player refuses |
 | "Playback failed" (orange) | Shown on slow player replies | Only on real errors |
-| Song switch | Hard swap | Title blur-swaps; cover blurs in once per song |
+| Song switch | Hard swap, ~1 s hold | Switches as soon as the player reports the next song; title blur-swaps, cover blurs in once per song |
 | No-length streams (Spotify DJ) | Empty timeline gap | Timeline row dropped; island fits |
 
 All 6 commits are on `mog`. The `notch` and `notch-music` test suites pass.
 
 ## Plan for next session
 
-1. Decide on removing upstream's ~1 s "between songs" hold so skips feel instant (asked).
 2. Keep polishing pages against Droppy. Empty pages stay at full height (decided).
 3. Keep checking idle cost after each feature. As of 2026-10-20 the fork idles at 0.8% CPU / 28 MB against upstream's 1.4% / 37 MB, both debug builds.
 
