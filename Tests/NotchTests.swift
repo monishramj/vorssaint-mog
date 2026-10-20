@@ -179,8 +179,9 @@ enum NotchTests {
                && NotchLayout.musicPlayerHeight(band: 0)
                    == NotchLayout.musicArtworkSize + NotchLayout.musicHeadSpacing + NotchLayout.musicTimelineHeight
                        + NotchLayout.rowSpacing + NotchLayout.musicTransportHeight + NotchLayout.musicBottomRoom
+               // mog: nothing playing keeps only the cover row.
                && NotchLayout.musicPlayerHeight(band: 37.5, playing: false)
-                   == NotchLayout.musicPlayerHeight(band: 37.5) - NotchLayout.musicTimelineHeight - NotchLayout.rowSpacing,
+                   == NotchLayout.musicHeadHeight(band: 37.5) + NotchLayout.musicBottomRoom,
                "the player is a small cover beside the camera, the song below it, the timeline and one row of buttons")
     }
 
