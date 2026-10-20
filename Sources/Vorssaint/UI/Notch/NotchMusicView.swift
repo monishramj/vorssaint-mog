@@ -271,7 +271,7 @@ struct NotchMusicView: View {
                 // Quiet beside the song, as the timeline's times are. The
                 // bars rest flat while paused, so the title keeps its width.
                 NotchLiveEqualizerBars(isPlaying: playback.isPlaying, bars: 4, barWidth: 2.5, height: 15,
-                                       tint: .white.opacity(0.5))
+                                       tint: accent.opacity(0.8)) // mog: the cover's colour, as Droppy's waveform
                 if band.besideCamera { sectionsButton }
             } corner: {
                 extraButtons
@@ -372,7 +372,7 @@ private struct NotchMusicSideButton: View {
     let action: () -> Void
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let height: CGFloat = 44
+    private let height: CGFloat = 36 // mog: the compact row
     private let plate: CGFloat = 32
 
     var body: some View {
@@ -387,7 +387,7 @@ private struct NotchMusicSideButton: View {
                 .frame(width: height, height: height)
                 .contentShape(Circle())
         }
-        .buttonStyle(NotchButtonStyle(cornerRadius: height / 2))
+        .buttonStyle(NotchButtonStyle(cornerRadius: 10)) // mog: Droppy's rounded-square hover
         .help(hint ?? title)
         .accessibilityLabel(title)
         .accessibilityHint(hint ?? "")
@@ -433,12 +433,13 @@ private struct NotchMusicOutputButton: View {
     }
 
     var body: some View {
-        NotchMenuButton(title: l10n.s.mixerSystemOutputTitle, items: items, cornerRadius: 22) {
+        // mog: the compact row's size and rounded-square hover.
+        NotchMenuButton(title: l10n.s.mixerSystemOutputTitle, items: items, cornerRadius: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.55))
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
         }
         .help(mixer.outputSwitchError ?? deviceName)
         .accessibilityValue(deviceName)
@@ -561,7 +562,7 @@ private struct NotchMusicTransport: View {
                 .frame(width: height, height: height)
                 .contentShape(Circle())
         }
-        .buttonStyle(NotchButtonStyle(cornerRadius: height / 2))
+        .buttonStyle(NotchButtonStyle(cornerRadius: 10)) // mog: Droppy's rounded-square hover
         // A second tap before the player answers asks for the state after it,
         // so only the player reaching what was asked ends the early word.
         .onChange(of: playback.isPlaying) { if playback.isPlaying == requestedPlaying { requestedPlaying = nil } }
@@ -589,7 +590,7 @@ private struct NotchMusicTransport: View {
                 .frame(width: height, height: height)
                 .contentShape(Circle())
         }
-        .buttonStyle(NotchButtonStyle(cornerRadius: height / 2))
+        .buttonStyle(NotchButtonStyle(cornerRadius: 10)) // mog: Droppy's rounded-square hover
         .disabled(!service.canPerform(command))
         .accessibilityLabel(title)
         .help(title)
