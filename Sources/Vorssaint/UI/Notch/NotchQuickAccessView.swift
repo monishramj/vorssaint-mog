@@ -99,7 +99,7 @@ struct NotchQuickAccessView: View {
         .accessibilityHidden(!motion.interactive)
     }
 
-    /// mog: translucent dark glass, fading in and dropping from the island
+    /// mog: a black pill, fading in and dropping from the island
     /// with the open spring, out as it closes.
     private func pillView(_ pill: CGRect) -> some View {
         let progress = motion.progress
@@ -107,8 +107,7 @@ struct NotchQuickAccessView: View {
             ForEach(motion.placements) { pillButton($0.button) }
         }
         .frame(width: pill.width, height: pill.height)
-        .background(Color.white.opacity(0.12), in: Capsule())
-        .background(HUDBackdropMaterial(cornerRadius: pill.height / 2, opacity: Double(min(1, max(0, progress)))))
+        .background(Color.black, in: Capsule()) // mog: solid black, like the island (user choice)
         .scaleEffect(0.9 + 0.1 * progress, anchor: .top)
         .opacity(Double(progress))
         .position(x: pill.midX, y: pill.midY - NotchQuickAccessLayout.pillGap * (1 - progress))

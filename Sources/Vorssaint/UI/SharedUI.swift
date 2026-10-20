@@ -246,7 +246,7 @@ struct HUDBackdrop: View {
 /// outline just outside the rounded card, and whether it shows depends on what
 /// is behind the window, which is why it looks intermittent. Clipping the layer
 /// to the same radius as the card removes it. Pass the card's corner radius.
-struct HUDBackdropMaterial: NSViewRepresentable { // mog: shared with the notch pill
+private struct HUDBackdropMaterial: NSViewRepresentable {
     var cornerRadius: CGFloat = 0
     var opacity: Double = 1
 
