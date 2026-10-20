@@ -224,7 +224,7 @@ struct NotchMusicView: View {
         let strings = FeatureStrings.notchMusicExtras(l10n.language)
         let consent = shuffle.availability?.access == .consent
         return NotchMusicSideButton(symbol: "shuffle", title: strings.shuffle, hint: consent ? strings.allowPlayback : nil,
-                                    active: shuffle.enabled == true, tint: accent) { shuffle.toggle() }
+                                    active: shuffle.enabled == true, tint: mutedAccent) { shuffle.toggle() } // mog: muted
             .disabled(shuffle.requestingAccess || !shuffle.allowed)
     }
 
