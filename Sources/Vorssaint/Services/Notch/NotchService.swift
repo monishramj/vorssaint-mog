@@ -3400,7 +3400,7 @@ final class NotchService: ObservableObject {
         let sameMenuBar = next.hasSameMenuBar(as: geometry)
         if sameMenuBar { next.compactSideRoom = geometry.compactSideRoom }
         let access = NotchQuickAccessConfiguration.current()
-        next.quickAccessBottomInset = access.hasBottom ? NotchQuickAccessLayout.gutter : 0
+        next.quickAccessBottomInset = access.buttons.isEmpty ? 0 : NotchQuickAccessLayout.gutter // mog: all in the pill
         // Read with the floating buttons rather than on every layout pass,
         // which would decode them each time.
         next.sectionsButtonInRow = !access.actions.contains(.explore)

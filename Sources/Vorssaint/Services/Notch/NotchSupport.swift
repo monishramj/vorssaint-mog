@@ -1427,6 +1427,16 @@ struct NotchQuickAccessConfiguration: Equatable, Codable {
     ])
     var actions: [NotchQuickAction] { buttons.compactMap(\.action) }
     var hasBottom: Bool { buttons.contains { $0.side == .bottom } }
+    /// mog: every button in one bottom row, left then bottom then right, drawn as the pill.
+    var pillRow: Self {
+        Self(buttons: [NotchQuickAccessSide.left, .bottom, .right].flatMap { side in
+            buttons.filter { $0.side == side }.map { button in
+                var result = button
+                result.side = .bottom
+                return result
+            }
+        })
+    }
 
     init(buttons: [NotchQuickButton]) { self.buttons = buttons }
 
@@ -1542,6 +1552,22 @@ enum NotchQuickAccessLayout {
     static let withdrawalDuration = 0.16
     static let hoverMargin: CGFloat = 16
     static let hoverExitDelay = 0.18
+    // mog: the glass pill a single bottom row draws as, below the island.
+    static let pillItem: CGFloat = 30
+    static let pillSpacing: CGFloat = 2
+    static let pillPadding: CGFloat = 5
+    static let pillHeight: CGFloat = 26
+    static let pillGap: CGFloat = 8
+
+    /// mog: the pill's frame for a row that is all bottom buttons, centred
+    /// under the island as their circles were; nil for any other layout.
+    static func pill(_ placements: [NotchQuickAccessPlacement]) -> CGRect? {
+        guard let first = placements.first, placements.allSatisfy({ $0.side == .bottom }) else { return nil }
+        let count = CGFloat(placements.count)
+        let midX = first.top + (count - 1) * rowSpacing / 2
+        let width = count * pillItem + (count - 1) * pillSpacing + pillPadding * 2
+        return CGRect(x: midX - width / 2, y: first.edge + pillGap, width: width, height: pillHeight)
+    }
 
     static func center(index: Int, progress: CGFloat, edge: CGFloat, top: CGFloat,
                        side: NotchQuickAccessSide) -> CGPoint {

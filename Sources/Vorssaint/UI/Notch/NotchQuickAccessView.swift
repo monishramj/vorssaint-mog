@@ -28,7 +28,11 @@ final class NotchQuickAccessMotion: ObservableObject {
     }
 
     var hoverRects: [CGRect] {
-        NotchQuickAccessSide.allCases.compactMap { side in
+        // mog: the pill's rim reaches back over its gap to the island.
+        if let pill = NotchQuickAccessLayout.pill(placements) {
+            return [pill.insetBy(dx: -NotchQuickAccessLayout.hoverMargin, dy: -NotchQuickAccessLayout.hoverMargin)]
+        }
+        return NotchQuickAccessSide.allCases.compactMap { side in
             let values = placements.filter { $0.side == side }
             guard let first = values.first else { return nil }
             return NotchQuickAccessLayout.hoverRect(count: values.count, edge: first.edge, top: first.top, side: side)
@@ -53,7 +57,8 @@ final class NotchQuickAccessMotion: ObservableObject {
     }
 
     func contains(_ point: CGPoint) -> Bool {
-        interactive && placements.contains { value in
+        if let pill = NotchQuickAccessLayout.pill(placements) { return interactive && pill.contains(point) } // mog:
+        return interactive && placements.contains { value in
             let center = value.center(progress: 1)
             return hypot(point.x - center.x, point.y - center.y) <= NotchQuickAccessLayout.diameter / 2
         }
@@ -82,6 +87,56 @@ struct NotchQuickAccessView: View {
     }
 
     var body: some View {
+        Group {
+            // mog: a single bottom row is one glass pill instead of circles.
+            if let pill = NotchQuickAccessLayout.pill(motion.placements) { pillView(pill) } else { floating }
+        }
+        .environment(\.colorScheme, .dark)
+        .environment(\.notchPresentation, true)
+        .foregroundStyle(.white)
+        .tint(.white)
+        .allowsHitTesting(motion.interactive)
+        .accessibilityHidden(!motion.interactive)
+    }
+
+    /// mog: translucent dark glass, fading in and dropping from the island
+    /// with the open spring, out as it closes.
+    private func pillView(_ pill: CGRect) -> some View {
+        let progress = motion.progress
+        return HStack(spacing: NotchQuickAccessLayout.pillSpacing) {
+            ForEach(motion.placements) { pillButton($0.button) }
+        }
+        .frame(width: pill.width, height: pill.height)
+        .background(Color.white.opacity(0.12), in: Capsule())
+        .background(HUDBackdropMaterial(cornerRadius: pill.height / 2, opacity: Double(min(1, max(0, progress)))))
+        .scaleEffect(0.9 + 0.1 * progress, anchor: .top)
+        .opacity(Double(progress))
+        .position(x: pill.midX, y: pill.midY - NotchQuickAccessLayout.pillGap * (1 - progress))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func pillButton(_ button: NotchQuickButton) -> some View {
+        let face = notchQuickFace(button, service: service, l10n: l10n)
+        return Button {
+            service.activateQuickAction(face.action)
+        } label: {
+            Image(systemName: face.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(face.selected ? 1 : 0.6))
+                .frame(width: NotchQuickAccessLayout.pillItem, height: 22)
+                .background {
+                    if face.selected { Circle().fill(.white.opacity(0.15)).frame(width: 22, height: 22) }
+                }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(NotchButtonStyle(cornerRadius: 11))
+        .help(face.title)
+        .accessibilityLabel(face.title)
+        .accessibilityAddTraits(face.selected ? .isSelected : [])
+        .accessibilityIdentifier("notch.quickAccess.\(button.id.uuidString)")
+    }
+
+    private var floating: some View {
         let drops = NotchQuickAccessDrops(placements: motion.placements, progress: motion.progress)
         let buttons = ZStack(alignment: .topLeading) {
             ForEach(motion.placements) { placement in
@@ -92,50 +147,17 @@ struct NotchQuickAccessView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        Group {
+        return Group {
             if followsGlass {
                 buttons.modifier(NotchQuickAccessGlassSurface(presentation: backdrop, drops: drops))
             } else {
                 buttons.background { drops }
             }
         }
-        .environment(\.colorScheme, .dark)
-        .environment(\.notchPresentation, true)
-        .foregroundStyle(.white)
-        .tint(.white)
-        .allowsHitTesting(motion.interactive)
-        .accessibilityHidden(!motion.interactive)
     }
 
     private func bubble(_ button: NotchQuickButton) -> some View {
-        let action = button.action ?? .explore
-        let isBack = action == .explore && service.showingSections
-        let selected: Bool = {
-            if action == .explore { return service.showingSections }
-            if action == .pin { return service.pinned }
-            if action == .control(.keepAwake) { return awake.isActive }
-            if action == .control(.microphone) { return microphone.isMuted }
-            if action == .control(.recording) { return recorder.isRecording }
-            if case .module(let module) = action {
-                return !service.showingSections && !service.showingAppPanel && service.selected == module
-            }
-            return false
-        }()
-        var actionTitle = action.title(l10n)
-        var symbol = action.symbol
-        switch action {
-        case .explore where isBack: symbol = "arrow.uturn.backward"
-        case .pin:
-            actionTitle = service.pinned ? FeatureStrings.notch(l10n.language).unpin : FeatureStrings.notch(l10n.language).pin
-            if service.pinned { symbol = "pin.fill" }
-        case .control(.microphone):
-            actionTitle = microphone.isMuted ? l10n.s.micUnmuteName : l10n.s.micMuteName
-            if microphone.isMuted { symbol = "mic.slash.fill" }
-        case .control(.keepAwake) where awake.isActive: symbol = "cup.and.saucer.fill"
-        case .control(.recording) where recorder.isRecording: symbol = "stop.circle.fill"
-        default: break
-        }
-        let title = isBack ? l10n.s.obBack : button.label.isEmpty ? actionTitle : button.label
+        let (action, symbol, title, selected) = notchQuickFace(button, service: service, l10n: l10n) // mog: shared with the pill
         return Button {
             service.activateQuickAction(action)
         } label: {
@@ -159,6 +181,43 @@ struct NotchQuickAccessView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("notch.quickAccess.\(button.id.uuidString)")
     }
+}
+
+/// mog: what a quick-access button shows, for the circle and the pill alike.
+/// Callers observe the services it reads.
+func notchQuickFace(_ button: NotchQuickButton, service: NotchService, l10n: L10n)
+    -> (action: NotchQuickAction, symbol: String, title: String, selected: Bool) {
+    let awake = KeepAwakeManager.shared, microphone = MicMuteService.shared, recorder = ScreenRecorderService.shared
+    let action = button.action ?? .explore
+    let isBack = action == .explore && service.showingSections
+    let selected: Bool = {
+        if action == .explore { return service.showingSections }
+        if action == .pin { return service.pinned }
+        if action == .control(.keepAwake) { return awake.isActive }
+        if action == .control(.microphone) { return microphone.isMuted }
+        if action == .control(.recording) { return recorder.isRecording }
+        if action == .control(.panel) { return service.showingAppPanel } // mog:
+        if case .module(let module) = action {
+            return !service.showingSections && !service.showingAppPanel && service.selected == module
+        }
+        return false
+    }()
+    var actionTitle = action.title(l10n)
+    var symbol = action.symbol
+    switch action {
+    case .explore where isBack: symbol = "arrow.uturn.backward"
+    case .pin:
+        actionTitle = service.pinned ? FeatureStrings.notch(l10n.language).unpin : FeatureStrings.notch(l10n.language).pin
+        if service.pinned { symbol = "pin.fill" }
+    case .control(.microphone):
+        actionTitle = microphone.isMuted ? l10n.s.micUnmuteName : l10n.s.micMuteName
+        if microphone.isMuted { symbol = "mic.slash.fill" }
+    case .control(.keepAwake) where awake.isActive: symbol = "cup.and.saucer.fill"
+    case .control(.recording) where recorder.isRecording: symbol = "stop.circle.fill"
+    default: break
+    }
+    let title = isBack ? l10n.s.obBack : button.label.isEmpty ? actionTitle : button.label
+    return (action, symbol, title, selected)
 }
 
 /// Every button's drop, in the coordinates of the whole floating layer.

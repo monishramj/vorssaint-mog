@@ -193,7 +193,7 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         let previousFrame = currentGeometry.frame(for: CGSize(width: targetSize.width + previousGutter * 2, height: targetSize.height + previousBottom))
         let withdrawing = !revealing && quickAccessConfiguration != nil && quickAccess == nil
         if revealing { quickAccessContainer?.motion.setVisible(false, animated: false) }
-        quickAccessConfiguration = quickAccessContainer == nil ? nil : quickAccess
+        quickAccessConfiguration = quickAccessContainer == nil ? nil : quickAccess?.pillRow // mog: one row, the pill below the island
         quickAccessAnimate = canAnimate
         if quickAccessConfiguration != nil { quickAccessNotchSize = size }
         if withdrawing { quickAccessContainer?.motion.setVisible(false, animated: canAnimate) }
