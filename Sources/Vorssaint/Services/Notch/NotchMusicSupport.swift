@@ -207,6 +207,13 @@ struct NotchTrackChange {
         return !song.matches(played)
     }
 
+    /// mog: the same player naming a different song, as after a skip, shows at once even before it plays.
+    static func isNextSong(_ next: NotchPlayback?, after current: NotchPlayback) -> Bool {
+        guard let next, let player = Self.player(of: next), player == Self.player(of: current),
+              let song = Self.song(of: next), let played = Self.song(of: current) else { return false }
+        return !song.matches(played)
+    }
+
     mutating func reset() { songs = [:] }
 
     private static func player(of playback: NotchPlayback) -> String? {

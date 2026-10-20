@@ -496,24 +496,25 @@ enum NotchMusicHardeningTests {
         service.receive(reading(next))
         suite.expect(service.playback == next && service.gapWork == nil && service.trackChanges.announcedOver == [current],
                      "the next song replaces it at once, announced while the song before is still shown")
+        // mog: a skip within the same player shows the next song at once, even before it plays.
         service.receive(reading(paused(later)))
-        suite.expect(service.playback == next && service.gapWork != nil,
-                     "the next song reported paused before it starts keeps the song that played")
+        suite.expect(service.playback == paused(later) && service.gapWork == nil,
+                     "the next song reported paused before it starts replaces the song that played at once")
         suite.expect(service.trackEnds.announcedOver.isEmpty, "a gap that ends in a new song ends nothing")
         Contract.DispatchQueue.main.drain()
         suite.expect(service.playback == paused(later) && service.gapWork == nil,
-                     "a song that stays paused is shown after the grace period")
-        suite.expect(service.trackEnds.announcedOver == [next],
-                     "the end of the song is announced while it is still shown")
+                     "a song that stays paused stays shown")
+        suite.expect(service.trackEnds.announcedOver.isEmpty, // mog: a skip is a swap, not an end
+                     "a skip to the next song announces no end")
         service.receive(reading(later))
         service.receive(reading(paused(later)))
-        suite.expect(service.playback == paused(later) && service.gapWork == nil && service.trackEnds.announcedOver == [next],
+        suite.expect(service.playback == paused(later) && service.gapWork == nil && service.trackEnds.announcedOver.isEmpty, // mog
                      "pausing the song that plays is shown at once, and ends nothing")
         service.receive(reading(later))
         service.receive(reading(standIn, sources: [listed, other]))
         suite.expect(service.playback == standIn && service.gapWork == nil && service.sources == [listed, other],
                      "a pause that hands automatic playback to another player's paused song is shown at once")
-        suite.expect(service.trackEnds.announcedOver == [next, later],
+        suite.expect(service.trackEnds.announcedOver == [later], // mog: the skip before announced no end
                      "the strip leaves such a pause as its own song")
     }
 

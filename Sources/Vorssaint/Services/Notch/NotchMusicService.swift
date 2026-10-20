@@ -246,6 +246,7 @@ final class NotchMusicService: ObservableObject {
         // lists again can be its next one, still loading.
         let listing = gapWork == nil ? reading.sources : []
         if let current = playback, !awaitingPlayback,
+           !NotchTrackChange.isNextSong(reading.playback, after: current), // mog: skips switch instantly
            NotchTrackChange.isBetweenSongs(reading.playback, after: current, sources: listing) {
             gapReading = reading
             guard gapWork == nil else { return }
@@ -272,7 +273,8 @@ final class NotchMusicService: ObservableObject {
     private func apply(_ reading: Reading) {
         let first = awaitingPlayback
         if trackChange.isNewSong(reading.playback, first: first) { trackChanges.send() }
-        else if !first, let current = playback, NotchTrackChange.isBetweenSongs(reading.playback, after: current) {
+        else if !first, let current = playback, !NotchTrackChange.isNextSong(reading.playback, after: current), // mog
+                NotchTrackChange.isBetweenSongs(reading.playback, after: current) {
             trackEnds.send()
         }
         updateArtwork(reading.artwork, tint: reading.tint, playback: reading.playback)
