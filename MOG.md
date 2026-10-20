@@ -21,7 +21,7 @@ All 6 commits are on `mog`. The `notch` and `notch-music` test suites pass.
 
 1. **3D AirPods in the connect card.** Droppy and Alcove show a turning 3D render, while ours is the flat SF Symbol. Look for system 3D or device art first, such as Find My / CoreTypes device models or the `connectivityModel` approach. Then the card's glyph animates the way Droppy's does.
 2. **Connect card, settle phase.** After about 2 s, Droppy collapses the card into compact wings (icon on the left, small ring on the right).
-3. **GitHub remote.** A non-fork repo so the commits count on the profile, with `upstream` kept for syncing. Waiting on answers (see the chat).
+3. **GitHub remote**: done; see the sync workflow in `.github/workflows/upstream-sync.yml`.
 4. Keep polishing pages against Droppy. Empty pages stay at full height (decided).
 
 ## Dev loop
