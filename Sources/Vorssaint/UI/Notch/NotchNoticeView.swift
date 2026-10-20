@@ -31,45 +31,6 @@ struct NotchNoticeView: View {
     }
 
     var body: some View {
-        if notice.isConnectionCard { connectionCard } else { strip } // mog
-    }
-
-    /// mog: Droppy-style connect card below the camera band: glyph, status
-    /// over name, and a battery ring when the device's charge is known.
-    private var connectionCard: some View {
-        let size = notice.cardSize(in: geometry)
-        return HStack(spacing: 10) {
-            Image(systemName: notice.symbol)
-                .font(.system(size: 26))
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(notice.title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
-                Text(notice.detail)
-                    .font(.system(size: 14, weight: .semibold))
-                    .truncationMode(.tail)
-            }
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let battery = notice.battery {
-                NotchAgentRing(value: Double(battery) / 100,
-                               tint: battery <= 10 ? .red : battery <= NotchAccessorySupport.lowThreshold ? .orange : .green,
-                               lineWidth: 3)
-                    .frame(width: 26, height: 26)
-                    .overlay { Text("\(battery)").font(.system(size: 11, weight: .semibold)).monospacedDigit() }
-            }
-        }
-        .padding(.horizontal, NotchLayout.shoulder + 12)
-        .frame(width: size.width, height: size.height - geometry.stripHeight)
-        .padding(.top, geometry.stripHeight)
-        .foregroundStyle(.white)
-        .id(notice.event)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(notice.accessibilityText + (notice.battery.map { ", \($0)%" } ?? ""))
-    }
-
-    private var strip: some View {
         HStack(spacing: 0) {
             leading
                 .padding(.leading, notice.inset(wing: wings.leading))
