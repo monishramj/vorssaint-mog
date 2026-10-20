@@ -140,7 +140,8 @@ enum NotchCompactTests {
         var editor: NSTextView?
         var body: some View { Color.clear }
     }
-    struct Music { var playback: Bool? = true }
+    struct Playback { var duration: Double = 1 } // mog: the page reads the length to size the timeline row
+    struct Music { var playback: Playback? = Playback() }
     struct Page {
         var music = Music()
         var showsDetail = false

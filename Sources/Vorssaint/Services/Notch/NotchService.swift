@@ -828,6 +828,7 @@ final class NotchService: ObservableObject {
         return geometry.expandedSize(module: module, detail: detail, panel: panel, detailHeight: detailHeight,
                                      shortcutCount: shortcuts,
                                      sliderCount: sliders, controlsHaveMusic: controls.contains(.music), musicHasContent: NotchMusicService.shared.playback != nil,
+                                     musicHasTimeline: (NotchMusicService.shared.playback?.duration ?? 0) > 0, // mog
                                      musicExtraHeight: musicExtraHeight, fileMediaHeight: fileMediaHeight,
                                      systemCards: NotchSupport.systemCardCount(hasBattery: PowerSampler.hasInternalBattery,
                                                                                fans: SystemMonitor.shared.snapshot.fanSpeeds.count),
@@ -3869,7 +3870,8 @@ final class NotchService: ObservableObject {
             music.trackEnds
                 .sink { [weak self] in self?.holdEndingTrack() }
                 .store(in: &subscriptions)
-            music.$playback.map { ($0 != nil, $0?.isPlaying == true) }
+            // mog: a length arriving or leaving adds or drops the timeline's row.
+            music.$playback.map { ($0 != nil, $0?.isPlaying == true, ($0?.duration ?? 0) > 0) }
                 .removeDuplicates { $0 == $1 }.receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in
                     self?.syncMenuSpaceMonitoring()

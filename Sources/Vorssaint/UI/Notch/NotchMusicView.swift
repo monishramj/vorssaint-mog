@@ -44,7 +44,8 @@ struct NotchMusicView: View {
         let geometry = NotchService.shared.geometry
         let split = NotchLayout.musicSplit(
             height: size.height, extras: extrasHeight,
-            resting: NotchLayout.musicPlayerHeight(band: bandHeight, playing: service.playback != nil),
+            resting: NotchLayout.musicPlayerHeight(band: bandHeight, playing: service.playback != nil,
+                                                   timeline: (service.playback?.duration ?? 0) > 0), // mog
             keepsPlayer: !preview && geometry.layout != .custom, extraOpen: openExtra != nil)
         // With the player gone the list starts below the camera's row, which
         // keeps its toggles; without that row they come back in one of their
@@ -277,15 +278,18 @@ struct NotchMusicView: View {
                 extraButtons
                 sectionsButton
             }
-            NotchMusicTimeline(playback: playback, service: service, tint: accent, timesBeside: true)
-                .padding(.top, NotchLayout.musicHeadSpacing)
+            // mog: no length, no timeline row; the buttons move up under the song.
+            if playback.duration > 0 {
+                NotchMusicTimeline(playback: playback, service: service, tint: accent, timesBeside: true)
+                    .padding(.top, NotchLayout.musicHeadSpacing)
+            }
             transportRow {
                 if !preview && shuffle.isOffered { shuffleButton }
             } middle: { slot in
                 // mog: Droppy-style smaller, evenly spread controls.
                 NotchMusicTransport(playback: playback, compact: true, slot: slot)
             }
-            .padding(.top, NotchLayout.rowSpacing)
+            .padding(.top, playback.duration > 0 ? NotchLayout.rowSpacing : NotchLayout.musicHeadSpacing)
             Color.clear.frame(height: NotchLayout.musicBottomRoom)
         }
         .modifier(NotchMusicSwipeFeedback())

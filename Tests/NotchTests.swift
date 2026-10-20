@@ -181,7 +181,10 @@ enum NotchTests {
                        + NotchLayout.rowSpacing + NotchLayout.musicTransportHeight + NotchLayout.musicBottomRoom
                // mog: nothing playing keeps only the cover row.
                && NotchLayout.musicPlayerHeight(band: 37.5, playing: false)
-                   == NotchLayout.musicHeadHeight(band: 37.5) + NotchLayout.musicBottomRoom,
+                   == NotchLayout.musicHeadHeight(band: 37.5) + NotchLayout.musicBottomRoom
+               // mog: a stream with no length drops only the timeline's row.
+               && NotchLayout.musicPlayerHeight(band: 37.5, timeline: false)
+                   == NotchLayout.musicPlayerHeight(band: 37.5) - NotchLayout.musicTimelineHeight - NotchLayout.rowSpacing,
                "the player is a small cover beside the camera, the song below it, the timeline and one row of buttons")
     }
 
