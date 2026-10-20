@@ -89,6 +89,29 @@ enum NotchAccessorySupport {
         return image
     }
 
+    // mog: the headset's own 3D model, fetched and rendered by Tools/fetch-device-models.sh
+    // and never copied into the repo. Other devices, or a missing file, keep the still art.
+    static func modelFile(name: String, symbol: String) -> String? {
+        let lowered = name.lowercased()
+        guard ["airpods", "airpodspro", "airpodsmax", "headphones"].contains(symbol) || lowered.contains("beats") else { return nil }
+        if lowered.contains("airpods pro") { return "airpods-pro" }
+        if lowered.contains("airpods max") { return "airpods-max" }
+        if lowered.contains("airpods") { return "airpods" }
+        if ["buds", "fit pro", "powerbeats", "flex"].contains(where: lowered.contains) { return "beats-earbuds" }
+        return "headphones"
+    }
+
+    /// Frames in one turn of a sheet Tools/RenderDeviceSprites.swift renders.
+    static let turnFrames = 48
+
+    /// The model's sprite sheet of one turn, when it has been rendered.
+    static func model(name: String, symbol: String) -> URL? {
+        guard let file = modelFile(name: name, symbol: symbol) else { return nil }
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/vorssaint-mog/models/\(file)-turn-\(turnFrames).png")
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
     static func identity(_ device: PeripheralBatteryDevice) -> String {
         // The existing sampler coalesces the same physical accessory by name
         // when its reading moves between HID, system metadata and Bluetooth.

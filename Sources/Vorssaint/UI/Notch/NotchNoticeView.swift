@@ -94,16 +94,15 @@ struct NotchNoticeView: View {
                         NotchAgentMark(provider: agent, size: 13)
                     } else if notice.event == .track {
                         NotchTrackArtwork(size: min(18, geometry.stripHeight - 6))
-                    } else if let image = notice.image { // mog: system device art
-                        Image(nsImage: image).resizable().scaledToFit()
-                            .frame(height: min(18, geometry.stripHeight - 6))
+                    } else if let model = notice.model { // mog: the device's turning 3D model
+                        NotchDeviceModelView(url: model, still: still)
+                            .frame(width: notice.markWidth, height: min(23, geometry.stripHeight - 6))
+                            .id(model)
                     } else {
-                        Image(systemName: notice.symbol)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(tint)
+                        still
                     }
                 }
-                .frame(width: 18)
+                .frame(width: notice.markWidth)
                 Text(notice.level == nil ? notice.title : notice.detail)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(textTint)
@@ -115,6 +114,18 @@ struct NotchNoticeView: View {
             .frame(maxWidth: .infinity, alignment: notice.readsFromEnds ? .leading : .trailing)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.14), value: notice.detail)
             .transaction { $0.disablesAnimations = false }
+        }
+    }
+
+    /// mog: system device art, or the symbol without it.
+    @ViewBuilder private var still: some View {
+        if let image = notice.image {
+            Image(nsImage: image).resizable().scaledToFit()
+                .frame(height: min(18, geometry.stripHeight - 6))
+        } else {
+            Image(systemName: notice.symbol)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(tint)
         }
     }
 

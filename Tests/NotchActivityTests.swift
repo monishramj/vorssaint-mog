@@ -949,6 +949,15 @@ enum NotchActivityTests {
         suite.expect(NotchAccessorySupport.symbol(name: "Alex’s Magic Keyboard", majorClass: 0x05, minorClass: 0x25) == "keyboard"
                && NotchAccessorySupport.symbol(name: "AirPods Pro", majorClass: 0x04, minorClass: 0x05) == "airpodspro",
                "a name that says what the accessory is outranks its announced class")
+        // mog: headsets map to their 3D model; other accessories keep the still art.
+        for (name, symbol, file) in [("AirPods Pro", "airpodspro", "airpods-pro"), ("Alex’s AirPods Max", "airpodsmax", "airpods-max"),
+                                     ("AirPods", "airpods", "airpods"), ("Beats Fit Pro", "headphones", "beats-earbuds"),
+                                     ("Powerbeats Pro", "headphones", "beats-earbuds"), ("Beats Studio Pro", "headphones", "headphones"),
+                                     ("Sony WH-1000XM5", "headphones", "headphones"), ("Magic Keyboard", "keyboard", nil),
+                                     ("Flex Mouse", "computermouse", nil)] as [(String, String, String?)] {
+            suite.expect(NotchAccessorySupport.modelFile(name: name, symbol: symbol) == file,
+                         "\(name) shows the \(file ?? "still") model")
+        }
         func device(_ percent: Int, id: String = "HID:1", name: String = "Keyboard") -> PeripheralBatteryDevice {
             PeripheralBatteryDevice(id: id, name: name, percent: percent, kind: .keyboard)
         }

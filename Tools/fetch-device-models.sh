@@ -10,3 +10,5 @@ fetch airpods.usdz "https://www.apple.com/105/media/us/airpods-5/2026/1bae77a6-8
 fetch airpods-max.usdz "https://www.apple.com/105/media/us/airpods-max/2024/e8f376d6-82b2-40ca-8a22-5f87de755d6b/ar/airpods-max-midnight-variant.usdz"
 fetch headphones.usdz "https://www.beatsbydre.com/content/dam/beats/web/product/headphones/studiopro-wireless/global/3d/studio-pro-black.usdz"
 fetch beats-earbuds.usdz "https://www.beatsbydre.com/content/dam/beats/web/product/earbuds/powerbeats-pro-2/pdp/product-carousel/jet-black/3d/pbpro2-jet-black-p02.usdz"
+# mog: one full turn of each model as a local sprite sheet, which is what the app plays.
+swift "$(dirname "$0")/RenderDeviceSprites.swift" "$dir" 2> >(grep -v "Coding Error" >&2)

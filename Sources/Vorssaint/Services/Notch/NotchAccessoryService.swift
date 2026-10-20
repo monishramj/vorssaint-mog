@@ -97,7 +97,8 @@ final class NotchAccessoryService: NSObject {
             let symbol = NotchAccessorySupport.symbol(name: name, majorClass: UInt32(device.deviceClassMajor),
                                                       minorClass: UInt32(device.deviceClassMinor))
             self.enqueue(NotchNotice(event: .accessory, title: text.connected, detail: name, symbol: symbol,
-                image: NotchAccessorySupport.image(name: name, symbol: symbol)), // mog:
+                image: NotchAccessorySupport.image(name: name, symbol: symbol),
+                model: NotchAccessorySupport.model(name: name, symbol: symbol)), // mog:
                          device: name)
         }
     }
