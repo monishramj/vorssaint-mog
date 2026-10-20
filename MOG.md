@@ -19,6 +19,10 @@ All 6 commits are on `mog`. The `notch` and `notch-music` test suites pass.
 
 ## Plan for next session
 
+0. **Player bugs (user report, 2026-10-20):**
+   - No animation when switching songs; the new track lags behind.
+   - Orange text shows when changing playback. That's likely the `commandFailed` "playback failed" line in `NotchMusicView`, or the source/consent hint; reproduce and find the cause.
+   - Play/pause reacts far too slowly. Check `requestedPlaying` in `NotchMusicTransport`; it only updates optimistically for "direct" players, so Spotify waits for the round trip.
 1. **3D AirPods in the connect card.** Droppy and Alcove show a turning 3D render, while ours is the flat SF Symbol. Look for system 3D or device art first, such as Find My / CoreTypes device models or the `connectivityModel` approach. Then the card's glyph animates the way Droppy's does.
 2. **Connect card, settle phase.** After about 2 s, Droppy collapses the card into compact wings (icon on the left, small ring on the right).
 3. **GitHub remote**: done; see the sync workflow in `.github/workflows/upstream-sync.yml`.
