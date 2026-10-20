@@ -1,0 +1,33 @@
+# mog: every Monday, open (or refresh) a PR that brings vorssaint/vorssaint-utils main into mog.
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mog
+          fetch-depth: 0
+      - name: Open a PR with upstream changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --no-tags https://github.com/vorssaint/vorssaint-utils.git main
+          if git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "mog already has upstream main."; exit 0
+          fi
+          git push -f origin FETCH_HEAD:refs/heads/upstream-sync
+          gh pr view upstream-sync --json state -q .state 2>/dev/null | grep -q OPEN || \
+            gh pr create --base mog --head upstream-sync \
+              --title "Sync with upstream Vorssaint" \
+              --body "Brings the latest vorssaint/vorssaint-utils main into mog. Resolve any conflicts here, then merge (not squash) to keep upstream history."
