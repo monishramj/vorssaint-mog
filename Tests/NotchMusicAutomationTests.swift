@@ -32,6 +32,9 @@ enum NotchMusicAutomationFlowContract {
         static var alive = true
         static var permission = Access.granted
         static var deliveries: [(NotchPlaybackCommand, Int32)] = []
+        // mog: Simulate delivery errors separately from player error replies.
+        static var deliveryError: NSError?
+        static var replyError: Int32 = 0
         static func access(to target: Target) -> Access { permission }
         static var capabilities: NotchMusicAutomationCapabilities?
         static var inspections = 0
@@ -45,7 +48,11 @@ enum NotchMusicAutomationFlowContract {
             let pid: Int32
             func sendEvent(options: [Option], timeout: TimeInterval) throws -> NSAppleEventDescriptor {
                 deliveries.append((command, pid))
-                return NSAppleEventDescriptor.record()
+                // mog: A player can act before the sender times out waiting for its reply.
+                if let deliveryError { throw deliveryError }
+                let reply = NSAppleEventDescriptor.record()
+                reply.setParam(NSAppleEventDescriptor(int32: replyError), forKeyword: keyErrorNumber)
+                return reply
             }
         }
         static func event(_ command: NotchPlaybackCommand, playback: NotchPlayback,
@@ -82,6 +89,8 @@ enum NotchMusicAutomationFlowContract {
         NotchMusicAutomation.alive = true
         NotchMusicAutomation.permission = .granted
         NotchMusicAutomation.deliveries = []
+        NotchMusicAutomation.deliveryError = nil // mog: Keep failure fixtures isolated.
+        NotchMusicAutomation.replyError = 0
         NotchMusicAutomation.capabilities = nil
         NotchMusicAutomation.inspections = 0
         NotchMusicAutomation.shuffleState = false
@@ -422,6 +431,24 @@ enum NotchMusicAutomationTests {
         service.queue.drain(); Context.DispatchQueue.main.drain()
         suite.expect(Automation.deliveries.count == 1 && Automation.deliveries.first?.1 == 42 && !service.commandPending,
                "a fresh validation permits exactly one event to the captured process")
+
+        // mog: Missing replies are inconclusive; genuine delivery and player errors still show failure.
+        for command in [NotchPlaybackCommand.toggle, .next] {
+            for outcome in 0..<4 {
+                Automation.deliveries = []
+                Automation.deliveryError = outcome == 0 ? NSError(domain: NSOSStatusErrorDomain, code: Int(errAETimeout))
+                    : outcome == 1 ? NSError(domain: NSOSStatusErrorDomain, code: Int(errAEEventNotPermitted)) : nil
+                Automation.replyError = outcome == 2 ? Int32(errAEEventNotHandled) : 0
+                _ = service.beginAutomation(command, playback: current)
+                service.receiveValidation(["validationRequest": service.automationAction!.id.uuidString, "validationOK": true])
+                service.queue.drain(); Context.DispatchQueue.main.drain()
+                suite.expect(service.commandFailed == (outcome == 1 || outcome == 2) && !service.commandPending
+                             && Automation.deliveries.count == 1,
+                             "toggle and skip report explicit failures, never retry, and do not mistake a reply timeout for failure")
+            }
+        }
+        Automation.deliveryError = nil
+        Automation.replyError = 0
 
         for interruption in 0..<4 {
             Automation.deliveries = []

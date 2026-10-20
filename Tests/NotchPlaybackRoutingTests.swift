@@ -46,6 +46,8 @@ enum NotchPlaybackRoutingContract {
     static var requestedArtwork = false
     static var sendError: UInt32 = 0
     static var sendResponses: [NSNumber]? = [0]
+    static var repliesToSend = true // mog: Exercise accepted commands whose acknowledgement never arrives.
+    static var lateSendReply: (() -> Void)?
     static var playbackState: UInt32 = 0
     static var sourceStates: [Int32: UInt32] = [:]
     static var lastPosition: (revision: UUID, sample: Double, timestamp: Date?, elapsed: Double, rate: Double, at: Date)?
@@ -129,7 +131,11 @@ enum NotchPlaybackRoutingContract {
                 NotchPlaybackRoutingContract.destination = path
                 NotchPlaybackRoutingContract.command = value
                 NotchPlaybackRoutingContract.options = settings
-                completion(NotchPlaybackRoutingContract.sendError, NotchPlaybackRoutingContract.sendResponses as NSArray?)
+                if NotchPlaybackRoutingContract.repliesToSend { // mog: A missing reply must not be treated as a rejected action.
+                    completion(NotchPlaybackRoutingContract.sendError, NotchPlaybackRoutingContract.sendResponses as NSArray?)
+                } else {
+                    NotchPlaybackRoutingContract.lateSendReply = { completion(0, [0]) }
+                }
                 return true
             }
             return unsafeBitCast(send, to: T.self)
@@ -226,7 +232,17 @@ enum NotchPlaybackRoutingTests {
         suite.expect(!Adapter.send(2, to: music), "a rejected native command is not reported as delivered")
         Adapter.sendError = 0
         Adapter.sendResponses = nil
-        suite.expect(!Adapter.send(2, to: music), "a native send without a handler result cannot claim delivery")
+        // mog: Acceptance without an acknowledgement leaves the observed player in charge.
+        suite.expect(Adapter.send(2, to: music), "an accepted native command without handler results is not a playback failure")
+        Adapter.sendResponses = []
+        suite.expect(Adapter.send(4, to: music), "an empty handler acknowledgement does not turn a skip orange")
+        Adapter.sendResponses = [1]
+        suite.expect(!Adapter.send(2, to: music), "an explicit handler failure still rejects playback")
+        Adapter.repliesToSend = false
+        suite.expect(Adapter.send(2, to: music), "a missing acknowledgement after acceptance cannot prove playback failed")
+        Adapter.lateSendReply?()
+        Adapter.lateSendReply = nil
+        Adapter.repliesToSend = true
         Adapter.sendResponses = [0]
         var unavailable = music
         unavailable.allowsDirectCommands = false

@@ -575,10 +575,8 @@ private struct NotchMusicTransport: View {
     private var toggleButton: some View {
         Button {
             if service.canPerform(.toggle) {
-                // Only a player the island writes to directly answers fast enough
-                // to show its word early; a slower path waits for the player.
-                let direct = playback.canSendCommandsDirectly
-                if service.send(.toggle, context: playback.commandContext), direct { requestedPlaying = !showsPlaying }
+                // mog: Acknowledge Automation taps too; observed playback and the fallback below settle the glyph.
+                if service.send(.toggle, context: playback.commandContext) { requestedPlaying = !showsPlaying }
             } else { service.requestAutomationAccess() }
         } label: {
             Image(systemName: showsPlaying ? "pause.fill" : "play.fill")
@@ -594,6 +592,7 @@ private struct NotchMusicTransport: View {
         // so only the player reaching what was asked ends the early word.
         .onChange(of: playback.isPlaying) { if playback.isPlaying == requestedPlaying { requestedPlaying = nil } }
         .onChange(of: playback.track) { requestedPlaying = nil }
+        .onChange(of: service.commandFailed) { if service.commandFailed { requestedPlaying = nil } } // mog: Revert rejected commands immediately.
         // A player that never answers leaves the button as it was.
         .task(id: requestedPlaying) {
             guard requestedPlaying != nil else { return }

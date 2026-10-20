@@ -403,11 +403,14 @@ enum NotchNativePlayback {
         group.enter()
         guard send(command, settings, target.path, 0, callbacks, { error, responses in
             resultLock.lock()
-            delivered = error == 0 && (responses as? [NSNumber])?.contains(where: { $0.intValue == 0 }) == true
+            // mog: No handler acknowledgement is unknown, not a rejection of an already accepted command.
+            delivered = error == 0 && (responses == nil || responses?.count == 0
+                || (responses as? [NSNumber])?.contains(where: { $0.intValue == 0 }) == true)
             resultLock.unlock()
             group.leave()
         }) else { return false }
-        guard group.wait(timeout: .now() + 2) == .success else { return false }
+        // mog: Acceptance can time out after taking effect; observed playback settles it without a retry.
+        guard group.wait(timeout: .now() + 2) == .success else { return true }
         return resultLock.withLock { delivered }
     }
 
