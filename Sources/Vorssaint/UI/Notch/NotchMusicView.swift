@@ -22,13 +22,6 @@ struct NotchMusicView: View {
     /// The cover's own colour, used for the moving parts that belong to this
     /// track. Neutral covers keep them white.
     private var accent: Color { service.artworkTint?.color ?? .white }
-    /// mog: Alcove's quieter take on the cover's colour for the bar and bars: less saturated, never glaring.
-    private var mutedAccent: Color {
-        guard let tint = service.artworkTint?.color,
-              let c = NSColor(tint).usingColorSpace(.sRGB) else { return .white }
-        return Color(hue: c.hueComponent, saturation: c.saturationComponent * 0.4,
-                     brightness: min(0.82, max(0.6, c.brightnessComponent)))
-    }
     private var showsLyrics: Bool { lyricsEnabled && AppFeature.notchLyrics.isAvailable }
     private var showsQueue: Bool { queueEnabled && AppFeature.notchQueue.isAvailable }
     private var openExtra: MusicExtra? {
@@ -224,7 +217,7 @@ struct NotchMusicView: View {
         let strings = FeatureStrings.notchMusicExtras(l10n.language)
         let consent = shuffle.availability?.access == .consent
         return NotchMusicSideButton(symbol: "shuffle", title: strings.shuffle, hint: consent ? strings.allowPlayback : nil,
-                                    active: shuffle.enabled == true, tint: mutedAccent) { shuffle.toggle() } // mog: muted
+                                    active: shuffle.enabled == true, tint: accent) { shuffle.toggle() } // mog: muted
             .disabled(shuffle.requestingAccess || !shuffle.allowed)
     }
 
@@ -302,7 +295,7 @@ struct NotchMusicView: View {
                 // Quiet beside the song, as the timeline's times are. The
                 // bars rest flat while paused, so the title keeps its width.
                 NotchLiveEqualizerBars(isPlaying: playback.isPlaying, bars: 4, barWidth: 2.5, height: 15,
-                                       tint: mutedAccent.opacity(0.8)) // mog: the cover's colour, muted
+                                       tint: accent.opacity(0.8)) // mog: the cover's colour, muted
                 if band.besideCamera { sectionsButton }
             } corner: {
                 extraButtons
@@ -310,7 +303,7 @@ struct NotchMusicView: View {
             }
             // mog: no length, no timeline row; the buttons move up under the song.
             if playback.duration > 0 {
-                NotchMusicTimeline(playback: playback, service: service, tint: mutedAccent, timesBeside: true) // mog
+                NotchMusicTimeline(playback: playback, service: service, tint: accent, timesBeside: true) // mog
                     .padding(.top, NotchLayout.musicHeadSpacing)
             }
             transportRow {

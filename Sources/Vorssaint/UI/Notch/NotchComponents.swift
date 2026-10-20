@@ -35,7 +35,12 @@ struct NotchButtonStyle: ButtonStyle {
 }
 
 extension NotchArtworkTint {
-    var color: Color { Color(.sRGB, red: red, green: green, blue: blue, opacity: 1) }
+    // mog: every use of the cover's colour (strip, player, lock screen) takes Alcove's muted version.
+    var color: Color {
+        let c = NSColor(srgbRed: red, green: green, blue: blue, alpha: 1)
+        return Color(hue: c.hueComponent, saturation: c.saturationComponent * 0.4,
+                     brightness: min(0.82, max(0.6, c.brightnessComponent)))
+    }
 }
 
 /// The bars with the live levels attached. Only this small view observes the
