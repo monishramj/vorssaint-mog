@@ -313,10 +313,8 @@ final class NotchWindowHost: NSObject, CAAnimationDelegate {
         animation.keyTimes = motion.keyTimes.map { NSNumber(value: $0) }
         animation.calculationMode = .linear
         animation.duration = motion.duration
-        if withdrawing {
-            animation.beginTime = CACurrentMediaTime() + NotchQuickAccessLayout.withdrawalDuration
-            animation.fillMode = .backwards
-        }
+        // mog: no hold while the floating buttons withdraw; they sit in the
+        // gutter outside the island, so it shrinks with them instead of after.
         animation.delegate = self
         animation.setValue(generation, forKey: "notchGeneration")
         isAnimating = true
@@ -1463,8 +1461,9 @@ private final class NotchCanvas: NSView {
             // sooner than sharp content could. Reversals continue from the
             // opacity already on screen. A shape that snaps into place only
             // needs its first frames drawn.
-            let keyTimes: [NSNumber] = kind == .dismiss ? [0, 0.65, 1] : shapeSnaps ? [0, 0.25, 1] : [0, 0.35, 1]
-            let duration: CFTimeInterval = kind == .dismiss ? 0.40 : shapeSnaps ? 0.2 : 0.45
+            // mog: content blurs in with the growth rather than after it (Alcove-like).
+            let keyTimes: [NSNumber] = kind == .dismiss ? [0, 0.4, 1] : shapeSnaps ? [0, 0.25, 1] : [0, 0.1, 1]
+            let duration: CFTimeInterval = kind == .dismiss ? 0.34 : shapeSnaps ? 0.2 : 0.38
             animation.values = [start, start, 1]
             animation.keyTimes = keyTimes
             animation.duration = duration
