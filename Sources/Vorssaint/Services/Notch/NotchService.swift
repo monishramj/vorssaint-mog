@@ -13,6 +13,9 @@ struct NotchNotice: Equatable {
     let symbol: String
     /// mog: realistic device art that takes the symbol's place in the strip.
     var image: NSImage? = nil
+    /// mog: the device's 3D model, turning in a wider mark slot in place of the art.
+    var model: URL? = nil
+    var markWidth: CGFloat { model == nil ? 18 : 27 }
     var level: Double? = nil
     var notification: NotchNotificationContent? = nil
     var notificationID: UUID? = nil
@@ -53,7 +56,7 @@ struct NotchNotice: Equatable {
         let maximum: CGFloat = event == .accessory && level == nil ? 160 : 240
         func fitted(_ content: CGFloat) -> CGFloat { min(maximum, max(Self.minimumWing, ceil(content) + 16 + cameraGap)) }
         // An empty title leaves the mark alone, without the space after it.
-        let mark = fitted(leading > 0 ? leading + 18 + 8 : 18)
+        let mark = fitted(leading > 0 ? leading + markWidth + 8 : markWidth) // mog:
         guard level == nil else { return NotchNoticeWings(leading: mark, trailing: mark) }
         return NotchNoticeWings(leading: mark, trailing: fitted((detail as NSString).size(withAttributes: [.font: font]).width))
     }
