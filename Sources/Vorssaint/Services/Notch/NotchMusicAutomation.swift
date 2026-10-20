@@ -140,8 +140,13 @@ enum NotchMusicAutomation {
               let event = event(command, playback: playback, capabilities: availability.capabilities, pid: availability.target.pid),
               !cancellation.isCancelled, availability.target.isCurrent,
               ProcessInfo.processInfo.systemUptime - validatedAt < 0.5 else { return false }
-        // A timeout may occur after delivery. Never retry a playback action.
-        guard let reply = try? event.sendEvent(options: [.waitForReply, .neverInteract, .dontRecord], timeout: 1) else { return false }
-        return (reply.paramDescriptor(forKeyword: keyErrorNumber)?.int32Value ?? 0) == 0
+        // mog: A reply timeout can follow successful playback; let observations settle it, without retrying.
+        do {
+            let reply = try event.sendEvent(options: [.waitForReply, .neverInteract, .dontRecord], timeout: 1)
+            return (reply.paramDescriptor(forKeyword: keyErrorNumber)?.int32Value ?? 0) == 0
+        } catch {
+            let error = error as NSError
+            return error.domain == NSOSStatusErrorDomain && error.code == Int(errAETimeout)
+        }
     }
 }
