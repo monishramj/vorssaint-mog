@@ -94,6 +94,9 @@ struct NotchNoticeView: View {
                         NotchAgentMark(provider: agent, size: 13)
                     } else if notice.event == .track {
                         NotchTrackArtwork(size: min(18, geometry.stripHeight - 6))
+                    } else if let image = notice.image { // mog: system device art
+                        Image(nsImage: image).resizable().scaledToFit()
+                            .frame(height: min(18, geometry.stripHeight - 6))
                     } else {
                         Image(systemName: notice.symbol)
                             .font(.system(size: 14, weight: .medium))

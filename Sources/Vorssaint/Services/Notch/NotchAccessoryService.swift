@@ -94,9 +94,10 @@ final class NotchAccessoryService: NSObject {
             let text = FeatureStrings.notchActivities(L10n.shared.language)
             // The status stays short beside its icon, so the name gets a
             // whole wing to itself before it has to be shortened.
-            self.enqueue(NotchNotice(event: .accessory, title: text.connected, detail: name,
-                symbol: NotchAccessorySupport.symbol(name: name, majorClass: UInt32(device.deviceClassMajor),
-                                                     minorClass: UInt32(device.deviceClassMinor))),
+            let symbol = NotchAccessorySupport.symbol(name: name, majorClass: UInt32(device.deviceClassMajor),
+                                                      minorClass: UInt32(device.deviceClassMinor))
+            self.enqueue(NotchNotice(event: .accessory, title: text.connected, detail: name, symbol: symbol,
+                image: NotchAccessorySupport.image(name: name, symbol: symbol)), // mog:
                          device: name)
         }
     }

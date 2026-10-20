@@ -11,6 +11,8 @@ struct NotchNotice: Equatable {
     let title: String
     let detail: String
     let symbol: String
+    /// mog: realistic device art that takes the symbol's place in the strip.
+    var image: NSImage? = nil
     var level: Double? = nil
     var notification: NotchNotificationContent? = nil
     var notificationID: UUID? = nil

@@ -202,8 +202,9 @@ enum NotchPresentationProbe {
             cameraWidth: cameraWidth, menuBarHeight: measurements.height(
                 displayID: screen.notchDisplayID, frame: screen.frame, visibleTop: screen.visibleFrame.maxY,
                 scale: screen.backingScaleFactor, statusBarThickness: NSStatusBar.system.thickness))
+        let symbol = NotchAccessorySupport.symbol(name: title, majorClass: 0x04, minorClass: 0x06)
         let notice = NotchNotice(event: .accessory, title: FeatureStrings.notchActivities(L10n.shared.language).connected,
-                                detail: title, symbol: NotchAccessorySupport.symbol(name: title, majorClass: 0x04, minorClass: 0x06))
+                                detail: title, symbol: symbol, image: NotchAccessorySupport.image(name: title, symbol: symbol)) // mog:
         let size = geometry.noticeSize(wings: notice.wings(in: geometry))
         var shifted = geometry
         shifted.surfaceShift = geometry.noticeShift(notice.wings(in: geometry))

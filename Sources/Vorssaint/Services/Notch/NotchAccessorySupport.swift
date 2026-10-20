@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Vorssaint
 
-import Foundation
+import AppKit
 
 enum NotchAccessorySupport {
     static let lowThreshold = 20
@@ -63,6 +63,30 @@ enum NotchAccessorySupport {
         case (0x08, _): return "gamecontroller"
         default: return symbol(for: .device, name: name)
         }
+    }
+
+    // mog: macOS's own Bluetooth product art, read at runtime and never copied
+    // into the repo. A missing file, or a device with no art, keeps the symbol.
+    private static let artFolder = "/System/Library/PrivateFrameworks/CoreBluetoothUI.framework/Resources/"
+    private static let namedArt: [(String, String)] = [
+        ("airpods max", "B515-0-Black.icns"), ("airpods pro", "B788.icns"), ("airpods", "B768.icns"),
+        ("beats studio pro", "B453-1-Black.icns"), ("beats fit pro", "B494-1-Black.icns"),
+        ("beats studio buds", "B507-1-Black.icns"), ("beats flex", "B372-1-Black.icns"),
+        ("beats solo", "B419-1-Black.png"), ("magic keyboard", "A222-20-Silver.icns"),
+        ("magic mouse", "A125-White.icns"), ("magic trackpad", "D67-White.icns")]
+    private static let classArt = ["headphones": "Generic-Headphones.png", "keyboard": "Generic-Keyboard.icns",
+        "computermouse": "Generic-Mouse.icns", "rectangle.and.hand.point.up.left": "D67-White.icns",
+        "hifispeaker": "Generic-Speakers.png", "gamecontroller": "Generic-GameController.png"]
+    private static var artCache: [String: NSImage?] = [:]
+
+    /// Loaded on first use per file, then kept.
+    static func image(name: String, symbol: String) -> NSImage? {
+        let lowered = name.lowercased()
+        guard let file = namedArt.first(where: { lowered.contains($0.0) })?.1 ?? classArt[symbol] else { return nil }
+        if let cached = artCache[file] { return cached }
+        let image = NSImage(contentsOfFile: artFolder + file)
+        artCache[file] = image
+        return image
     }
 
     static func identity(_ device: PeripheralBatteryDevice) -> String {
