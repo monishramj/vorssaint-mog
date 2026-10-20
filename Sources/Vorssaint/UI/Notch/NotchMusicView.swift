@@ -238,31 +238,46 @@ struct NotchMusicView: View {
         .frame(height: NotchLayout.musicTransportHeight)
     }
 
+    /// mog: Alcove-style song change, run only while it happens; Reduce Motion keeps a plain cross-fade.
+    private var songSwap: AnyTransition { reduceMotion ? .opacity : AnyTransition(.blurReplace) }
+
     /// The cover and the song, the timeline across the island, then one row
     /// of buttons, as a phone's island lays out its player.
     private func player(_ playback: NotchPlayback) -> some View {
         VStack(spacing: 0) {
             head(corner: !band.besideCamera && (showsLyrics || showsQueue || band.pageSectionsButton)) {
                 Button { RadialNowPlayingApplication.open(playback.track) } label: {
-                    NotchArtwork(image: service.artwork, size: NotchLayout.musicArtworkSize, source: playback.track)
-                        .scaleEffect(playback.isPlaying || reduceMotion ? 1 : 0.94)
-                        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: playback.isPlaying)
+                    // mog: a new cover blurs in over the old one when it lands, which can be after the song's name.
+                    ZStack {
+                        NotchArtwork(image: service.artwork, size: NotchLayout.musicArtworkSize, source: playback.track)
+                            .id(service.artwork.map(ObjectIdentifier.init))
+                            .transition(songSwap)
+                    }
+                    .animation(.smooth(duration: 0.3), value: service.artwork.map(ObjectIdentifier.init))
+                    .scaleEffect(playback.isPlaying || reduceMotion ? 1 : 0.94)
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: playback.isPlaying)
                 }
                 .buttonStyle(NotchButtonStyle(cornerRadius: NotchLayout.musicArtworkSize * 0.19))
                 .help(text.mediaNowPlaying)
                 .accessibilityLabel(text.mediaNowPlaying)
             } titles: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(playback.track.title ?? text.mediaNowPlaying)
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
-                        .help(playback.track.title ?? text.mediaNowPlaying)
-                    Text(service.commandFailed ? FeatureStrings.notchMusicExtras(l10n.language).playbackFailed
-                         : playback.track.artist ?? playback.track.album ?? text.mediaNowPlaying)
-                        .font(.system(size: 13))
-                        .foregroundStyle(service.commandFailed ? .orange : .secondary)
-                        .lineLimit(1)
+                // mog: the song's name swaps as soon as it is read, without waiting for its cover.
+                ZStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(playback.track.title ?? text.mediaNowPlaying)
+                            .font(.system(size: 14, weight: .semibold))
+                            .lineLimit(1)
+                            .help(playback.track.title ?? text.mediaNowPlaying)
+                        Text(service.commandFailed ? FeatureStrings.notchMusicExtras(l10n.language).playbackFailed
+                             : playback.track.artist ?? playback.track.album ?? text.mediaNowPlaying)
+                            .font(.system(size: 13))
+                            .foregroundStyle(service.commandFailed ? .orange : .secondary)
+                            .lineLimit(1)
+                    }
+                    .id(playback.track.title)
+                    .transition(songSwap)
                 }
+                .animation(.smooth(duration: 0.3), value: playback.track.title)
             } accessory: {
                 // Which player the buttons drive, by its icon, when there is a choice.
                 if service.sources.count > 1 || !service.sourceIsAutomatic {
