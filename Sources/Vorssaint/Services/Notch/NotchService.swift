@@ -2286,8 +2286,9 @@ final class NotchService: ObservableObject {
         if incoming.notification != nil, let shown = notice, shown.notification != nil, noticeCanPresent, !noticeExpanded {
             incoming.minimumWings = shown.wings(in: geometry)
         }
-        let keepsPreview = noticeExpanded && incoming.notificationID != nil
-            && windowHost?.containsHover(NSEvent.mouseLocation) == true
+        // mog: incoming messages open the existing preview immediately, without taking focus.
+        let keepsPreview = incoming.notificationID != nil && noticeCanPresent && !hiddenUntilHover
+        if incoming.notificationID != nil { hoverWork?.cancel(); hoverWork = nil }
         // Slider and key bursts only replace the displayed value. They never
         // restart a window resize or enqueue another layout animation.
         let transition: NotchContentTransition = !noticeCanPresent ? .none
@@ -2298,6 +2299,7 @@ final class NotchService: ObservableObject {
         mutatePresentation(transitionContent: transition) {
             notice = incoming
             noticeExpanded = keepsPreview
+            if keepsPreview { peeking = false } // mog: a preview replaces any pending peek.
         }
         if let mascotFrom { bridgeMascotIntoNotice(incoming, from: mascotFrom) }
         // A banner arriving under the pointer is held at once, whether the
@@ -4030,6 +4032,12 @@ final class NotchService: ObservableObject {
                 .store(in: &subscriptions)
         }
         if NotchSupport.routes(.systemNotification) {
+            // mog: page dismiss, clear, and successful activation must also remove a queued banner.
+            NotchNotificationService.shared.dismissed.sink { [weak self] id in
+                guard let self, self.notice?.notificationID == id else { return }
+                self.settleNotificationHover()
+                self.dismissNotice()
+            }.store(in: &subscriptions)
             NotchNotificationService.shared.received.sink { [weak self] item in
                 guard let self else { return }
                 let shown = self.show(NotchNotice(event: .systemNotification, title: item.content.title,

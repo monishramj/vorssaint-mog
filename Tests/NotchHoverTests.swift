@@ -1555,6 +1555,18 @@ enum NotchHoverTests {
             service.scheduleNoticeDismissal(after: notice.event.duration)
             service.updateBounds()
         }
+        // mog: production arrival expands without hover, respects click-only mode, and times out.
+        for physical in [false, true] {
+            let automatic = fixture(physical)
+            UserDefaults.standard.enabled = false
+            leave(automatic)
+            expect(automatic.show(banner()) && automatic.noticeExpanded && automatic.openings == 0,
+                   "arrival opens the full card without opening a page or requiring hover")
+            DispatchQueue.main.advance(2.9)
+            expect(automatic.notice != nil, "an incoming card remains for its normal display time")
+            DispatchQueue.main.advance(0.2)
+            expect(automatic.notice == nil && !automatic.noticeExpanded, "an unhovered incoming card auto-collapses")
+        }
         for physical in [false, true] {
             let service = fixture(physical)
             arrive(service)
@@ -1679,8 +1691,9 @@ enum NotchHoverTests {
         DispatchQueue.main.advance(0.14)
         expect(exitRace.notice?.notificationID == fresh.notificationID,
                "new notification must survive the previous preview exit deadline")
-        expect(!exitRace.noticeExpanded && exitRace.noticeWork != nil,
-               "a new message outside the pointer starts as a timed banner")
+        // mog: arrival expands immediately and cancels the preceding preview's exit callback.
+        expect(exitRace.noticeExpanded && exitRace.noticeWork != nil,
+               "a new message outside the pointer starts as a timed full card")
         DispatchQueue.main.advance(2.9)
         expect(exitRace.notice == nil, "the replacement closes after its own full display time")
 
@@ -1774,7 +1787,8 @@ enum NotchHoverTests {
         DispatchQueue.main.advance(0.10)
         expect(pendingOpen.show(banner("Before the island opens")), "a message is accepted while an opening is pending")
         DispatchQueue.main.advance(0.20)
-        expect(pendingOpen.openings == 0 && !pendingOpen.noticeExpanded, "the pending opening yields to the banner and the preview waits its own delay")
+        // mog: arrival replaces a pending page opening immediately, even before its hover delay.
+        expect(pendingOpen.openings == 0 && pendingOpen.noticeExpanded, "the pending opening yields immediately to the full notification")
         DispatchQueue.main.advance(0.06)
         expect(pendingOpen.openings == 0 && pendingOpen.noticeExpanded, "the banner then opens as a preview instead of the island")
 
@@ -1805,13 +1819,14 @@ enum NotchHoverTests {
         let burst = fixture(false)
         leave(burst)
         expect(burst.show(wide) && burst.show(banner("ok")), "precondition: a burst replaces the banner")
-        expect(burst.surfaceSize == burst.geometry.noticeSize(wingWidth: wide.preferredWingWidth),
-               "a message replacing a banner still on screen keeps its width")
+        // mog: full cards use the existing preview width, independent of compact-wing text widths.
+        expect(burst.noticeExpanded && burst.surfaceSize.width == burst.geometry.notificationPreviewWidth,
+               "a message replacing a banner still on screen uses the full card width")
         DispatchQueue.main.advance(3.1)
         let alone = banner("ok")
         expect(burst.notice == nil && burst.show(alone) && alone.preferredWingWidth < wide.preferredWingWidth
-               && burst.surfaceSize == burst.geometry.noticeSize(wingWidth: alone.preferredWingWidth),
-               "the next message on its own takes only the width it needs")
+               && burst.noticeExpanded && burst.surfaceSize.width == burst.geometry.notificationPreviewWidth,
+               "the next message also opens as a full card") // mog: consistent preview on every arrival.
         let held = fixture(false)
         leave(held)
         expect(held.show(wide), "precondition: a wide banner is shown")
