@@ -1553,10 +1553,10 @@ enum NotchQuickAccessLayout {
     static let hoverMargin: CGFloat = 16
     static let hoverExitDelay = 0.18
     // mog: the glass pill a single bottom row draws as, below the island.
-    static let pillItem: CGFloat = 30
+    static let pillItem: CGFloat = 34 // mog: slightly larger quick-access targets
     static let pillSpacing: CGFloat = 2
     static let pillPadding: CGFloat = 5
-    static let pillHeight: CGFloat = 26
+    static let pillHeight: CGFloat = 30 // mog: pill, gap and hover rim fit the 72 pt gutter
     static let pillGap: CGFloat = 8
 
     /// mog: the pill's frame for a row that is all bottom buttons, centred

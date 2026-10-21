@@ -119,15 +119,15 @@ struct NotchQuickAccessView: View {
             service.activateQuickAction(face.action)
         } label: {
             Image(systemName: face.symbol)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 15, weight: .medium)) // mog: scale icons with the larger pill
                 .foregroundStyle(.white.opacity(face.selected ? 1 : 0.6))
-                .frame(width: NotchQuickAccessLayout.pillItem, height: 22)
+                .frame(width: NotchQuickAccessLayout.pillItem, height: 26) // mog: enlarge the button hit area too
                 .background {
-                    if face.selected { Circle().fill(.white.opacity(0.15)).frame(width: 22, height: 22) }
+                    if face.selected { Circle().fill(.white.opacity(0.15)).frame(width: 26, height: 26) } // mog: matching selection circle
                 }
                 .contentShape(Capsule())
         }
-        .buttonStyle(NotchButtonStyle(cornerRadius: 11))
+        .buttonStyle(NotchButtonStyle(cornerRadius: 13)) // mog: half the enlarged button height
         .help(face.title)
         .accessibilityLabel(face.title)
         .accessibilityAddTraits(face.selected ? .isSelected : [])
