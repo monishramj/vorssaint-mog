@@ -145,7 +145,7 @@ struct NotchDownloadsView: View {
                         }
                     }
                 }
-                .scrollIndicators(.automatic)
+                .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // The watched folder heads the island's top row, so the cards start at

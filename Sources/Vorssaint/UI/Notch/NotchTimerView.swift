@@ -258,7 +258,7 @@ struct NotchTimerView: View {
                     ForEach(readouts) { readout($0) }
                 }
             }
-            .scrollIndicators(.hidden)
+            .notchScrollEdgeFade(.horizontal) // mog: shared hidden indicators and overflow hints.
         }
     }
 

@@ -106,6 +106,7 @@ struct NotchSystemView: View {
                         grid(cards: cards, rows: rows).padding(inset)
                             .contentShape(Rectangle())
                     }
+                    .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
                 } else {
                     grid(cards: cards, rows: rows).padding(inset)
                 }

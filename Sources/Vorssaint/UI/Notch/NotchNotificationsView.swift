@@ -40,6 +40,7 @@ struct NotchNotificationsView: View {
                         }
                     }
                 }
+                .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

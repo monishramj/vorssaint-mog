@@ -334,8 +334,7 @@ struct NotchView: View {
                     .padding(.bottom, 4)
                     .contentShape(Rectangle())
             }
-            .scrollIndicators(.automatic)
-            .notchScrollEdgeFade()
+            .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
         } else {
             content
         }

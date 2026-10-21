@@ -30,7 +30,7 @@ struct NotchCalendarView: View {
                         if showsMonth {
                             HStack(alignment: .top, spacing: 16) {
                                 ScrollView { monthView(now: context.date) }
-                                    .scrollIndicators(.automatic)
+                                    .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
                                     .frame(width: 196)
                                 Rectangle().fill(.white.opacity(0.12)).frame(width: 1)
                                     .accessibilityHidden(true)
@@ -234,7 +234,7 @@ struct NotchCalendarView: View {
     private func agenda(now: Date) -> some View {
         ScrollViewReader { proxy in
             ScrollView { appointmentList(now: now) }
-                .scrollIndicators(.automatic)
+                .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
                 .id(selectedDay)
                 .onChange(of: calendar.loading ? nil : calendar.revealing, initial: true) { _, target in
                     guard !preview, let target else { return }

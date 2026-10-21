@@ -59,6 +59,9 @@ struct NotchScratchpadView: View {
                                         continuesLists: true,
                                         onCommandReturn: { pad.togglePreview() },
                                         isActive: !pad.isPreviewing) { view in
+                            // mog: keep native text scrolling without visible scrollers.
+                            view.enclosingScrollView?.hasVerticalScroller = false
+                            view.enclosingScrollView?.hasHorizontalScroller = false
                             view.insertionPointColor = .white
                             editor.view = view
                             DispatchQueue.main.async { focusEditor() }
@@ -70,6 +73,7 @@ struct NotchScratchpadView: View {
                             MarkdownPreview(blocks: ScratchpadSupport.markdownPreview(pad.text),
                                             baseSize: textSize,
                                             taskStates: (done: text.taskDone, notDone: text.taskNotDone),
+                                            showsScrollIndicators: false, // mog: hide the preview’s native scroller.
                                             onToggleTask: { pad.toggleTask(box: $0, through: editor.view) })
                         } else if pad.text.isEmpty {
                             Text(text.placeholder)
@@ -138,7 +142,7 @@ struct NotchScratchpadView: View {
                     ForEach(pad.pads) { entry in tab(entry).id(entry.id) }
                 }
             }
-            .scrollIndicators(.hidden)
+            .notchScrollEdgeFade(.horizontal) // mog: shared hidden indicators and overflow hints.
             .frame(height: 28)
             .onAppear {
                 guard let selected = pad.selectedPadID else { return }
