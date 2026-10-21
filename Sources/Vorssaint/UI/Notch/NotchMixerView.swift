@@ -394,7 +394,7 @@ private struct NotchMixerOptions: View {
             .padding(.trailing, 4)
             .padding(.bottom, 4)
         }
-        .scrollIndicators(.automatic)
+        .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

@@ -581,6 +581,7 @@ struct MarkdownPreview: NSViewRepresentable {
     var baseSize: CGFloat = PlainTextEditor.defaultFontSize
     /// How a task's checkbox tells VoiceOver it is done or not.
     let taskStates: (done: String, notDone: String)
+    var showsScrollIndicators = true // mog: the notch preview opts out of native scrollers.
     /// Called with the text offset of the box whose checkbox is clicked; the
     /// owner edits the text, and the preview follows from it.
     var onToggleTask: ((Int) -> Void)?
@@ -590,7 +591,8 @@ struct MarkdownPreview: NSViewRepresentable {
         // answers a click on a checkbox and points its cursor at it.
         let scroll = NSScrollView()
         scroll.drawsBackground = false
-        scroll.hasVerticalScroller = true
+        scroll.hasVerticalScroller = showsScrollIndicators // mog: preserve floating scratchpad scrollers.
+        scroll.hasHorizontalScroller = false // mog: the preview wraps horizontally.
         scroll.autohidesScrollers = true
         let textView = TaskPreviewTextView(frame: NSRect(origin: .zero, size: scroll.contentSize))
         textView.minSize = NSSize(width: 0, height: scroll.contentSize.height)

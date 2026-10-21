@@ -40,6 +40,7 @@ struct NotchNotificationsView: View {
                     NotchNotificationRow(item: item, service: service, text: text)
                         .frame(height: cardHeight)
                 }
+                .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

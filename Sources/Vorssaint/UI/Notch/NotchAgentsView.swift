@@ -61,7 +61,7 @@ struct NotchAgentsView: View {
                 TimelineView(.periodic(from: .now, by: 15)) { context in
                     if NotchAgentSupport.contentHeight(rows) > size.height + 0.5 {
                         ScrollView { grid(rows, now: context.date) }
-                            .scrollIndicators(.automatic)
+                            .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
                     } else {
                         grid(rows, now: context.date)
                     }

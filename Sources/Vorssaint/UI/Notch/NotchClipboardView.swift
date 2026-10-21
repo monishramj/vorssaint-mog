@@ -99,7 +99,7 @@ struct NotchClipboardView: View {
                             }
                         }
                     }
-                    .scrollIndicators(.automatic)
+                    .notchScrollEdgeFade() // mog: hide scrollers and hint at overflow.
                     .coordinateSpace(.named(Self.listSpace))
                     .onChange(of: highlightedID) { previous, id in
                         guard let id else { return }

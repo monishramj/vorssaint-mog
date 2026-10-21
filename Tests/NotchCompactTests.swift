@@ -221,6 +221,7 @@ enum NotchCompactTests {
         [view] + view.subviews.flatMap(descendants)
     }
     static func run(_ suite: TestSuite) {
+        scrollEdges(suite) // mog: verify hints at rest, between edges, and during bounce.
         camera(suite)
         calendarRows(suite)
         rail(suite)
@@ -230,6 +231,21 @@ enum NotchCompactTests {
         focus(suite)
         sizing(suite)
     }
+    // mog: fitting content never hints; overflow clears each hint at its corresponding edge.
+    private static func scrollEdges(_ suite: TestSuite) {
+        for (total, offset, start, end): (CGFloat, CGFloat, Bool, Bool) in [
+            (80, 0, false, false), (100, 0, false, false),
+            (80, -30, false, false), (80, 30, false, false),
+            (200, 0, false, true), (200, 50, true, true),
+            (200, 100, true, false), (200, -20, false, true),
+            (200, 120, true, false)
+        ] {
+            let edges = NotchScrollEdgeFade.Edges(offset: offset, visible: 100, total: total)
+            suite.expect(edges.start == start && edges.end == end,
+                         "scroll hints respect overflow and edges: total \(total), offset \(offset)")
+        }
+    }
+
     private static func calendarRows(_ suite: TestSuite) {
         // Local noon, so the one-hour event never crosses midnight in any time zone.
         let day = Calendar.current.date(bySettingHour: 12, minute: 0, second: 0,
@@ -395,6 +411,11 @@ enum NotchCompactTests {
         for preview in [true, false] {
             pad.isPreviewing = preview
             settle(host)
+            // mog: both scratchpad modes keep native scrolling without displaying scrollers.
+            let scrolls = descendants(host).compactMap { $0 as? NSScrollView }
+                .filter { $0.documentView is NSTextView }
+            suite.expect(!scrolls.isEmpty && scrolls.allSatisfy { !$0.hasVerticalScroller && !$0.hasHorizontalScroller },
+                         "notch scratchpad editor and preview hide both native scrollers")
             suite.expect(descendants(host).contains { $0 === editor },
                          "preview preserves the same editor and undo history")
             pad.clear(through: editor)

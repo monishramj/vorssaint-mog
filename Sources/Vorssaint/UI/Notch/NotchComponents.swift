@@ -336,8 +336,7 @@ struct NotchRail<Item: Identifiable, Content: View>: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .scrollIndicators(.never)
-                .notchScrollEdgeFade(.horizontal)
+                .notchScrollEdgeFade(.horizontal) // mog: shared hidden indicators and overflow hints.
                 .onAppear {
                     if let targetColumn { proxy.scrollTo(targetColumn, anchor: .center) }
                 }
