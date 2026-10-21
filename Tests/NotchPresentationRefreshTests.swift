@@ -241,6 +241,7 @@ enum NotchPresentationRefreshContract {
         var modules = NotchModule.allCases
         var homeControls: [NotchControlItem] = []
         var expandedGeometry: NotchGeometry { geometry }
+        func pageItemCount(_ module: NotchModule) -> Int { 0 } // mog: the page widths' item counts
         var compactActivityGeometry: NotchGeometry { geometry.compactTimerGeometry(showsDownloads: false) }
         var surfaceSize: CGSize {
             if fullscreenCompact { return geometry.restingSize(showsContent: false) }
@@ -460,6 +461,14 @@ enum NotchPresentationRefreshContract {
         page.expandedPageTop = .wrapsCamera
         suite.expect(page.expandedGeometry.headerCameraGap == 210 && page.expandedGeometry.pageTopInset == 0,
                      "a page that wraps the camera starts at the top of the row")
+        // mog: page switches reach the existing native presentation path with their own width.
+        for (module, width) in [(NotchModule.clipboard, CGFloat(544)), (.files, CGFloat(600)), (.downloads, CGFloat(544))] {
+            page.selected = module
+            page.refreshPresentation()
+            suite.expect(page.windowHost?.targetSize.width == width
+                         && page.windowHost?.frame.midX == page.geometry.screen.midX && page.windowHost?.steady == false,
+                         "switching to \(module) presents its centered width through the spring path")
+        }
         captureControlsChecks(suite)
         let picker = Service()
         picker.expanded = false
@@ -675,7 +684,7 @@ enum NotchPresentationRefreshContract {
         service.pinned = true
         service.removeCapture(id: captureID)
         suite.expect(service.expanded && service.captureContentHeight == nil && service.captureContent == nil
-               && contentSize == service.geometry.expandedSize(module: .captures)
+               && contentSize == service.expandedGeometry.expandedSize(module: .captures) // mog: return to the wider gallery.
                && service.windowHost?.targetSize == contentSize,
                "dismissing a pinned capture clears the preview size and restores the full recent-captures area")
 

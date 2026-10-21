@@ -256,18 +256,23 @@ struct NotchCalendarView: View {
         } else if groups.isEmpty {
             emptyAgenda.frame(maxWidth: .infinity, minHeight: 72)
         } else {
+            // mog: events share columns even when the agenda shows just one busy day.
+            let columns = showsMonth ? 1 : NotchLayout.railCapacity(width: size.width, itemWidth: NotchLayout.listCardWidth, spacing: 8)
             LazyVStack(alignment: .leading, spacing: 14) {
                 ForEach(groups, id: \.day) { group in
                     VStack(alignment: .leading, spacing: 7) {
                         if selectedDay == nil { dayLabel(group.day, now: now) }
-                        ForEach(group.events) { event in
-                            NotchCalendarEventRow(event: event, day: group.day, now: now,
-                                                  isNext: event.id == next?.id, text: text,
-                                                  countdown: countdownChoice(event, now: now),
-                                                  choose: { calendar.setCountdown($0, for: event) }) {
-                                openCalendar(showing: event)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8, alignment: .topLeading), count: columns),
+                                  alignment: .leading, spacing: 7) { // mog:
+                            ForEach(group.events) { event in
+                                NotchCalendarEventRow(event: event, day: group.day, now: now,
+                                                      isNext: event.id == next?.id, text: text,
+                                                      countdown: countdownChoice(event, now: now),
+                                                      choose: { calendar.setCountdown($0, for: event) }) {
+                                    openCalendar(showing: event)
+                                }
+                                .id(event.id)
                             }
-                            .id(event.id)
                         }
                     }
                 }

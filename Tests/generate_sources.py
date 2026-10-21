@@ -1357,7 +1357,7 @@ def main():
               "    private var comfortable: Bool {", "    private var rowHeight: CGFloat {", "    private func hover(",
               "    private func openSearch()", "    private func closeSearch()", "    private func handleKey(",
               "    private func openText(", "    private func searchHighlight(", "    private func follow(",
-              "    private func thumbnail<"])
+              "    private func thumbnail<", "    private var columns: Int {"])  # mog: the cards' columns
           + "}\n}\n")
     media_workspace = "Sources/Vorssaint/UI/Media/MediaWorkspaceView.swift"
     write("MediaWorkspaceLayout.swift", "import AppKit\nimport SwiftUI\nimport UniformTypeIdentifiers\n"
