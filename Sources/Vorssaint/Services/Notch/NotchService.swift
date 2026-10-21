@@ -778,7 +778,7 @@ final class NotchService: ObservableObject {
 
     var expandedSize: CGSize {
         if showingSections {
-            return geometry.sectionPickerSize(count: filteredSections.count)
+            return expandedGeometry.sectionPickerSize(count: filteredSections.count) // mog:
         }
         let musicExtras = NotchLyricsSupport.isEnabled() || NotchQueueSupport.isEnabled()
         let launcher = QuickLauncherService.shared
@@ -806,6 +806,7 @@ final class NotchService: ObservableObject {
         var result = geometry.page(module, controls: NotchSupport.controls(),
                                    sectionsButton: !NotchQuickAccessConfiguration.current().actions.contains(.explore))
         if result.pageTop == .wrapsCamera { result.pageTrailingControls = playerToggleCount }
+        result.pageWidth = result.wideWidth(module, count: pageItemCount(module)) // mog:
         return result
     }
 
@@ -822,7 +823,11 @@ final class NotchService: ObservableObject {
 
     /// The tallest island a preview can show: a page that fills the budget
     /// below its row.
-    var previewLargestSize: CGSize { previewGeometry(for: .calendar).expandedSize(module: .calendar) }
+    var previewLargestSize: CGSize {
+        var size = previewGeometry(for: .calendar).expandedSize(module: .calendar)
+        size.width = max(size.width, previewGeometry(for: .files).expandedWidth) // mog: previews also reserve the widest page.
+        return size
+    }
 
     private func pageSize(in geometry: NotchGeometry, module: NotchModule, detail: Bool, panel: Bool,
                           detailHeight: CGFloat?, musicExtraHeight: CGFloat, fileMediaHeight: CGFloat?, toolCount: Int?,
@@ -873,10 +878,25 @@ final class NotchService: ObservableObject {
         if !showingSections, !showingAppPanel, selectedMetric == nil, !modules.isEmpty {
             result.pageContentWidth = NotchLayout.naturalContentWidth(selected, controls: homeControls,
                                                                       within: geometry.contentWidth)
+            // mog: a capture being edited keeps the width it was measured at.
+            if selected != .captures || captureContent == nil {
+                result.pageWidth = result.wideWidth(selected, count: pageItemCount(selected))
+            }
         } else {
             result.sectionsButtonInRow = false
+            if showingSections { result.pageWidth = result.wideWidth(nil, count: modules.count) } // mog:
         }
         return result
+    }
+    /// mog: the items a grid page lays out, as its size reads them.
+    private func pageItemCount(_ module: NotchModule) -> Int {
+        switch module {
+        case .controls: return homeControls.filter { !$0.isLevel && $0 != .music }.count // mog:
+        case .tools: return QuickLauncherService.shared.visibleItems.count
+        case .system: return NotchSupport.systemCardCount(hasBattery: PowerSampler.hasInternalBattery,
+                                                          fans: SystemMonitor.shared.snapshot.fanSpeeds.count)
+        default: return 0
+        }
     }
     /// The gallery keeps its search in the top row and a detail its way
     /// back; with no sections the island shows only how to add them.
@@ -1741,6 +1761,7 @@ final class NotchService: ObservableObject {
 
     private var sectionRowLimits: (rows: Int, visible: Int) {
         let count = filteredSections.count
+        let geometry = expandedGeometry // mog: the gallery's own width
         return (NotchSectionPaging.rows(count: count, columns: geometry.sectionColumns), geometry.sectionRows(count: count))
     }
 
@@ -1749,7 +1770,7 @@ final class NotchService: ObservableObject {
     private func revealHighlightedSection() {
         guard let target = highlightedSection, let index = filteredSections.firstIndex(of: target) else { return }
         let limits = sectionRowLimits
-        let row = NotchSectionPaging.revealing(row: index / max(1, geometry.sectionColumns), first: sectionRow,
+        let row = NotchSectionPaging.revealing(row: index / max(1, expandedGeometry.sectionColumns), first: sectionRow, // mog:
                                                rows: limits.rows, visible: limits.visible)
         if row != sectionRow { sectionRow = row }
     }
@@ -1798,7 +1819,7 @@ final class NotchService: ObservableObject {
         }
         let index = highlightedSection.flatMap { sections.firstIndex(of: $0) } ?? 0
         highlightedSection = sections[QuickToolsSupport.gridIndex(after: index, count: sections.count,
-                                                                   flow: .rows(columns: geometry.sectionColumns),
+                                                                   flow: .rows(columns: expandedGeometry.sectionColumns), // mog:
                                                                    direction: direction)]
         return true
     }

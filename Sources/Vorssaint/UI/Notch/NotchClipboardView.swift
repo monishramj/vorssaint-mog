@@ -47,6 +47,14 @@ struct NotchClipboardView: View {
         history.filteredEntries(matching: query).filter { !pinnedOnly || $0.isPinned }
     }
 
+    /// mog: a wide island lays the cards out in columns, each this wide.
+    private var columns: Int {
+        NotchLayout.railCapacity(width: size.width, itemWidth: NotchLayout.listCardWidth, spacing: NotchLayout.clipboardCardSpacing)
+    }
+    private var cardWidth: CGFloat {
+        (size.width - CGFloat(columns - 1) * NotchLayout.clipboardCardSpacing) / CGFloat(columns)
+    }
+
     /// Moving swaps neighbours in the list, which a search would misreport.
     private var canReorder: Bool { query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
@@ -82,7 +90,9 @@ struct NotchClipboardView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: NotchLayout.clipboardCardSpacing) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: NotchLayout.clipboardCardSpacing,
+                                                                     alignment: .top), count: columns), // mog:
+                                  spacing: NotchLayout.clipboardCardSpacing) {
                             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                                 row(entry, place: index)
                                     .id(entry.id)
@@ -189,12 +199,12 @@ struct NotchClipboardView: View {
         if previous == nil {
             let list = size.height - (searchOpen ? NotchLayout.clipboardSearchHeight + NotchLayout.rowSpacing : 0)
             guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
-            let rows = NotchSupport.clipboardOpeningScroll(index: index, rowHeight: rowHeight,
+            let rows = NotchSupport.clipboardOpeningScroll(index: index / columns, rowHeight: rowHeight, // mog: by rows
                                                            spacing: NotchLayout.clipboardCardSpacing,
                                                            shown: NotchLayout.clipboardCompactCardHeight / 2,
                                                            visibleHeight: list)
             guard rows > 0 else { return }
-            target = entries[rows].id
+            target = entries[rows * columns].id // mog:
             anchor = .top
         }
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { proxy.scrollTo(target, anchor: anchor) }
@@ -271,7 +281,7 @@ struct NotchClipboardView: View {
                        NotchClipboardCardSize.openHeight(text: openText(entry), width: openTextWidth(entry), id: entry.id))
         case .image:
             return NotchClipboardCardSize.openHeight(aspectRatio: entry.imageAspectRatio.map { CGFloat($0) },
-                                                     width: size.width - 40)
+                                                     width: cardWidth - 40) // mog:
         case .files:
             return NotchLayout.clipboardCardHeight
         }
@@ -282,7 +292,7 @@ struct NotchClipboardView: View {
     private func openTextWidth(_ entry: ClipboardHistoryEntry) -> CGFloat {
         let scroller = NSScroller.preferredScrollerStyle == .legacy
             ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0
-        return size.width - 2 * 10 - (entry.color == nil ? 0 : 12 + 7) - scroller
+        return cardWidth - 2 * 10 - (entry.color == nil ? 0 : 12 + 7) - scroller // mog:
     }
 
     /// The text an open entry shows: the card preview the quick panel's cards

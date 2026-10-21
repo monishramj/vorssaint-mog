@@ -32,13 +32,13 @@ struct NotchNotificationsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // mog: a vertical list keeps the newest card at the top without changing page geometry.
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(service.items) { item in
-                            NotchNotificationRow(item: item, service: service, text: text)
-                        }
-                    }
+                let rows = NotchLayout.railRows(count: service.items.count,
+                                                perRow: NotchLayout.railCapacity(width: size.width, itemWidth: NotchLayout.listCardWidth, spacing: 8), // mog: share the container's column width.
+                                                rowHeight: 120, spacing: 8, height: size.height)
+                let cardHeight = (size.height - CGFloat(rows - 1) * 8) / CGFloat(rows)
+                NotchRail(items: service.items, rows: rows, itemWidth: NotchLayout.listCardWidth, width: size.width) { item in // mog:
+                    NotchNotificationRow(item: item, service: service, text: text)
+                        .frame(height: cardHeight)
                 }
             }
         }

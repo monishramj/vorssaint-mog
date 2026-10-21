@@ -139,7 +139,10 @@ struct NotchDownloadsView: View {
                     .frame(maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 8) {
+                    // mog: a wide island lays the cards out in columns.
+                    let columns = NotchLayout.railCapacity(width: size.width, itemWidth: NotchLayout.listCardWidth, spacing: 8)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8, alignment: .top), count: columns),
+                              spacing: 8) {
                         ForEach(downloads.items) { item in
                             downloadCard(item)
                         }

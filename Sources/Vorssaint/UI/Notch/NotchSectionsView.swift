@@ -35,9 +35,9 @@ struct NotchSectionsView: View {
     }
 
     private var gallery: some View {
-        let columns = service.geometry.sectionColumns
+        let columns = service.expandedGeometry.sectionColumns // mog: the gallery's own width
         let rows = NotchSectionPaging.rows(count: sections.count, columns: columns)
-        let visible = service.geometry.sectionRows(count: sections.count)
+        let visible = service.expandedGeometry.sectionRows(count: sections.count) // mog:
         let positions = NotchSectionPaging.positions(rows: rows, visible: visible)
         let first = NotchSectionPaging.clamped(service.sectionRow, rows: rows, visible: visible)
         let shown = first..<(first + visible)

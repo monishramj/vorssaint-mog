@@ -295,7 +295,7 @@ enum NotchLayout {
     /// its own circle above, never nearer.
     static let shortcutLeastRowSpacing: CGFloat = 6
     static let systemCardHeight: CGFloat = 72
-    static let systemCardWidth: CGFloat = 128
+    static let systemCardWidth: CGFloat = 120 // mog: four across the widest island
     /// Leave room for the card's hover scale, including a single full-width card.
     static func systemHoverInset(width: CGFloat) -> CGFloat { ceil(max(0, width) * 0.015) + 1 }
     static let toolHeight: CGFloat = 72
@@ -317,6 +317,10 @@ enum NotchLayout {
     /// One or two lines of the entry, until the pointer rests on it.
     static let clipboardCompactCardHeight: CGFloat = 52
     static let clipboardCardSpacing: CGFloat = 8
+    /// mog: the widest an open page grows to lay its items out in columns
+    /// instead of scrolling, and the narrowest card a list's column keeps.
+    static let maximumWidth: CGFloat = 600
+    static let listCardWidth: CGFloat = 240
     static let emptyHeight: CGFloat = 140
     /// The player as a phone's island lays it out: a small cover, the song
     /// beside it, the timeline and one row of buttons across the island,
@@ -2281,6 +2285,9 @@ struct NotchGeometry: Equatable {
     /// which stays the limit; nil takes all of it, as lists do. A width set
     /// by hand is the island's on every page.
     var pageContentWidth: CGFloat? = nil
+    /// mog: the island width a page asks for past the chosen width, up to
+    /// `NotchLayout.maximumWidth`, so its items sit in columns; nil keeps it.
+    var pageWidth: CGFloat? = nil
     /// Nothing floating beside the island leads to its sections, so the
     /// open page's row starts with the island's own button for them.
     var sectionsButtonInRow = false
@@ -2691,7 +2698,43 @@ struct NotchGeometry: Equatable {
         let preferred = layout == .custom ? chosen : pageContentWidth.map { natural in
             min(chosen, max(natural, isNotched ? cameraWidth + wing * 2 : 0) + NotchLayout.horizontalInset * 2)
         } ?? chosen
-        return min(max(preferred, cameraWidth + 36), screen.width - 24 - NotchQuickAccessLayout.gutter * 2)
+        // mog: pages that spread into columns stop at 600, including custom layouts.
+        let wide = pageWidth.map { min(NotchLayout.maximumWidth, max(preferred, $0)) } ?? preferred
+        return min(max(wide, cameraWidth + 36), screen.width - 24 - NotchQuickAccessLayout.gutter * 2)
+    }
+    /// mog: the width a page of `count` items asks for: two columns of cards
+    /// for a list, the widest island for the shelf, and for a grid the columns
+    /// its items take in the rows the budget holds; nil for `module` (the
+    /// gallery) asks for the sections' tiles. Other pages keep the chosen width.
+    func wideWidth(_ module: NotchModule?, count: Int) -> CGFloat? {
+        func rail(_ item: CGFloat, _ spacing: CGFloat, row: CGFloat, rowSpacing: CGFloat, height: CGFloat) -> CGFloat {
+            let rows = NotchLayout.railRows(count: count, perRow: 1, rowHeight: row, spacing: rowSpacing, height: height)
+            let columns = NotchLayout.railColumns(count: count, rows: rows)
+            return CGFloat(columns) * item + CGFloat(max(0, columns - 1)) * spacing
+        }
+        let content: CGFloat
+        switch module {
+        case nil:
+            content = rail(NotchLayout.sectionTileWidth, NotchLayout.sectionSpacing, row: NotchLayout.sectionTileHeight,
+                           rowSpacing: NotchLayout.sectionSpacing, height: pageBudget) + NotchLayout.sectionIndicatorWidth
+        case .tools?:
+            content = rail(NotchLayout.toolWidth, NotchLayout.toolSpacing, row: NotchLayout.toolHeight,
+                           rowSpacing: NotchLayout.toolSpacing, height: contentBudget)
+        case .controls?: // mog: give the shortcuts a wider row before wrapping or scrolling.
+            guard count > NotchLayout.railCapacity(width: contentWidth, itemWidth: NotchLayout.shortcutWidth,
+                                                  spacing: NotchLayout.shortcutSpacing) else { return nil }
+            content = CGFloat(count) * NotchLayout.shortcutWidth + CGFloat(max(0, count - 1)) * NotchLayout.shortcutSpacing
+        case .system?:
+            let inset = NotchLayout.systemHoverInset(width: NotchLayout.maximumWidth)
+            let cards = rail(NotchLayout.systemCardWidth, NotchLayout.rowSpacing, row: NotchLayout.systemCardHeight,
+                             rowSpacing: NotchLayout.rowSpacing, height: contentBudget - inset * 2)
+            content = cards + inset * 2
+        case .notifications?, .captures?, .clipboard?, .downloads?, .calendar?:
+            content = NotchLayout.listCardWidth * 2 + 8
+        case .files?, .mixer?, .agents?: return NotchLayout.maximumWidth // mog: room for the existing tile/fader columns.
+        default: return nil
+        }
+        return content + NotchLayout.horizontalInset * 2
     }
     var contentWidth: CGFloat { max(0, expandedWidth - NotchLayout.horizontalInset * 2) }
     /// Content height available before a page needs to scroll.

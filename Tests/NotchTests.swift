@@ -7,6 +7,71 @@ import AppKit
 import SwiftUI
 
 enum NotchTests {
+    // mog: page widths must reserve the same columns the views draw, before overflow scrolls.
+    private static func widePageContracts(_ suite: TestSuite) {
+        let base = NotchGeometry(screen: CGRect(x: 120, y: 0, width: 1440, height: 900), safeAreaTop: 32, cameraWidth: 180)
+        func page(_ module: NotchModule, count: Int = 0) -> NotchGeometry {
+            var result = base.page(module, controls: [], sectionsButton: false)
+            result.pageWidth = result.wideWidth(module, count: count)
+            return result
+        }
+        for module in [NotchModule.clipboard, .downloads, .calendar, .captures, .notifications] {
+            let geometry = page(module)
+            let size = geometry.expandedSize(module: module)
+            let content = geometry.contentSize(for: size)
+            suite.expect(size.width == 544 && content.width == 488
+                         && NotchLayout.railCapacity(width: content.width, itemWidth: 240, spacing: 8) == 2,
+                         "\(module) reserves two readable list columns")
+        }
+        let tools = page(.tools, count: 12)
+        suite.expect(tools.expandedWidth == 542 && tools.toolRows(count: 12) == 2
+                     && tools.toolFlow(count: 12) == .rows(columns: 6),
+                     "twelve tools widen into six columns without scrolling")
+        let crowdedTools = page(.tools, count: 16)
+        suite.expect(crowdedTools.expandedWidth == 600 && crowdedTools.toolFlow(count: 16) == .columns(rows: 2),
+                     "tools scroll only after reaching the width cap")
+        let system = page(.system, count: 8)
+        let systemSize = system.expandedSize(module: .system, systemCards: 8)
+        let systemContent = system.contentSize(for: systemSize)
+        let inset = NotchLayout.systemHoverInset(width: systemContent.width)
+        suite.expect(system.expandedWidth == 586 && system.systemRows(cards: 8) == 2
+                     && systemContent.height == NotchLayout.railHeight(rows: 2, rowHeight: 72, spacing: 10) + inset * 2,
+                     "eight System cards reserve two complete rows including their hover margin")
+        suite.expect(page(.controls, count: 6).expandedWidth == 552,
+                     "six home shortcuts fit across a wider page")
+        for module in [NotchModule.files, .mixer, .agents] {
+            suite.expect(page(module).expandedWidth == 600, "\(module) uses the full column budget")
+        }
+        let music = page(.music)
+        suite.expect(music.expandedWidth == base.page(.music, controls: [], sectionsButton: false).expandedWidth,
+                     "music retains its existing width")
+        var gallery = base
+        gallery.pageWidth = gallery.wideWidth(nil, count: 15)
+        suite.expect(gallery.expandedWidth == 560 && gallery.sectionColumns == 5 && gallery.sectionRows(count: 15) == 3,
+                     "fifteen sections fit in a five-column gallery")
+        for module in NotchModule.allCases {
+            let geometry = page(module, count: 20)
+            let size = geometry.expandedSize(module: module)
+            let frame = geometry.frame(for: size)
+            let placements = NotchQuickAccessLayout.placements(.initial.pillRow, body: frame, headerTop: frame.minY)
+            suite.expect(frame.midX == base.screen.midX && NotchQuickAccessLayout.pill(placements)?.midX == frame.midX,
+                         "\(module) keeps the island and quick-access pill centered")
+            let motion = NotchMotion.frames(from: music.expandedSize(module: .music), to: size)
+            let envelope = NotchMotion.envelope(from: music.expandedSize(module: .music), to: size)
+            suite.expect(motion.sizes.last == size && motion.sizes.allSatisfy { $0.width <= envelope.width && $0.height <= envelope.height },
+                         "the existing spring reaches \(module)'s width within its reserved envelope")
+        }
+        var narrow = NotchGeometry(screen: CGRect(x: 0, y: 0, width: 620, height: 900), safeAreaTop: 32, cameraWidth: 180)
+        narrow.pageWidth = narrow.wideWidth(.clipboard, count: 0)
+        suite.expect(narrow.expandedWidth == 452
+                     && NotchLayout.railCapacity(width: narrow.contentWidth, itemWidth: 240, spacing: 8) == 1,
+                     "small displays constrain the island and its grid together")
+        var custom = NotchGeometry(screen: base.screen, safeAreaTop: 32, cameraWidth: 180,
+                                   layout: .custom, customWidth: 800)
+        custom.pageWidth = custom.wideWidth(.files, count: 0)
+        suite.expect(custom.expandedWidth == 600, "column pages respect the cap even with a wider custom setting")
+    }
+
     private static func railContracts(_ suite: TestSuite) {
         let domain = "com.vorssaint.tests.notch-fan-only"
         let defaults = UserDefaults(suiteName: domain)!
@@ -1693,6 +1758,7 @@ enum NotchTests {
         NotchMissionControlPollingTests.run(suite)
         activitySelectionContracts(suite)
         railContracts(suite)
+        widePageContracts(suite) // mog:
         presentationSpacingContracts(suite)
         captureControlsLayoutContracts(suite)
         pageTopContracts(suite)

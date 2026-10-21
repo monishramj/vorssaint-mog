@@ -101,11 +101,11 @@ enum NotchClipboardPageTests {
         // list moves by whole entries, keeping the one at its top whole.
         let pinnedToo = Page.ClipboardHistoryEntry(id: UUID(), isPinned: true)
         func scrollsOpening(_ entries: [Page.ClipboardHistoryEntry], comfortable: Bool = true,
-                     height: CGFloat) -> [(id: UUID, anchor: UnitPoint?)] {
+                     height: CGFloat, width: CGFloat = 424) -> [(id: UUID, anchor: UnitPoint?)] { // mog: preserve single-column coverage
             let page = Page()
             if comfortable { page.cardSize = NotchClipboardCardSize.comfortable.rawValue }
             page.entries = entries
-            page.size.height = height
+            page.size = CGSize(width: width, height: height) // mog:
             let list = Page.ScrollViewProxy()
             page.follow(recent.id, from: nil, in: list)
             return list.scrolls
@@ -117,6 +117,13 @@ enum NotchClipboardPageTests {
         let moved = scrollsOpening([pinned, pinnedToo, recent], height: 180)
         suite.expect(moved.count == 1 && moved.first?.id == pinnedToo.id && moved.first?.anchor == .top,
                      "the clipboard page opens moved by whole entries when the entry copied last is out of view")
+        // mog: two columns keep three entries visible, then scroll by complete rows.
+        suite.expect(scrollsOpening([pinned, pinnedToo, recent], height: 180, width: 488).isEmpty,
+                     "a two-column clipboard opens without scrolling past the first row")
+        let wideEntries = (0..<4).map { _ in Page.ClipboardHistoryEntry(id: UUID(), isPinned: true) } + [recent]
+        let wideMoved = scrollsOpening(wideEntries, height: 180, width: 488)
+        suite.expect(wideMoved.count == 1 && wideMoved.first?.id == wideEntries[2].id && wideMoved.first?.anchor == .top,
+                     "clipboard overflow scrolls to the first entry of the next grid row")
         let following = Page()
         following.cardSize = NotchClipboardCardSize.comfortable.rawValue
         following.entries = [pinned, recent]
